@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Binance",
+    "chainId": 2500,
+    "gateway": "0x37a99f6117215dC3943FBB7eE5a8F83b22895e81",
+    "gasService": "0x9548171265Ba120bbCb3977aa697aD8474cdAf80",
+    "constAddressDeployer": "0x69aeB7Dc4f2A86873Dae8D753DE89326Cf90a77a",
+    "create3Deployer": "0x783E7717fD4592814614aFC47ee92568a495Ce0B",
+    "tokens": {
+      "aUSDC": "aUSDC"
+    },
+    "GMPExpressService": {
+      "expressOperator": "0x0F8B6a7447eA3c42cfcC1A05fAcbBb78153bB03a",
+      "salt": "GMPExpressService",
+      "address": "0xf6a4Cd4601f41DB325567C159EFE0e8f2Efe9Ee2",
+      "implementation": "0xf6a4Cd4601f41DB325567C159EFE0e8f2Efe9Ee2",
+      "deployer": "0x0F8B6a7447eA3c42cfcC1A05fAcbBb78153bB03a",
+      "proxyDeployer": "0x0A807ebAA5CaAB7CC8BE4E7909Ec66D7462d2418"
+    },
+    "rpc": "http://localhost:8500/0",
+    "tokenName": "Binance Coin",
+    "tokenSymbol": "BNB"
+  },
+  {
+    "name": "Polygon",
+    "chainId": 2501,
+    "gateway": "0xc7B788E88BAaB770A6d4936cdcCcd5250E1bbAd8",
+    "gasService": "0xC573c722e21eD7fadD38A8f189818433e01Ae466",
+    "constAddressDeployer": "0x69aeB7Dc4f2A86873Dae8D753DE89326Cf90a77a",
+    "create3Deployer": "0x783E7717fD4592814614aFC47ee92568a495Ce0B",
+    "tokens": {
+      "aUSDC": "aUSDC"
+    },
+    "GMPExpressService": {
+      "expressOperator": "0x3E41c6473A51aD613796d5758d01f1c037Adf94F",
+      "salt": "GMPExpressService",
+      "address": "0x194598519587185673fec0E2C3e9F9Ed94bF2451",
+      "implementation": "0x194598519587185673fec0E2C3e9F9Ed94bF2451",
+      "deployer": "0x3E41c6473A51aD613796d5758d01f1c037Adf94F",
+      "proxyDeployer": "0x98d7d56c3F29F31997A622bfA17197Ce25695dCe"
+    },
+    "rpc": "http://localhost:8500/1",
+    "tokenName": "Matic",
+    "tokenSymbol": "MATIC"
+  },
+  {
+    "name": "Avalanche",
+    "chainId": 2502,
+    "gateway": "0x54C156f087EBA12a869E0CBb49548c3F55E80edC",
+    "gasService": "0xD3cB555CB530C3374B122242b15d2943445c31d6",
+    "constAddressDeployer": "0x69aeB7Dc4f2A86873Dae8D753DE89326Cf90a77a",
+    "create3Deployer": "0x783E7717fD4592814614aFC47ee92568a495Ce0B",
+    "tokens": {
+      "aUSDC": "aUSDC"
+    },
+    "GMPExpressService": {
+      "expressOperator": "0x26A3B0F45fCA655Cb6C2c0498C6870394A5a8b93",
+      "salt": "GMPExpressService",
+      "address": "0xC89c53D6C7031DA523387f72588380900955533D",
+      "implementation": "0xC89c53D6C7031DA523387f72588380900955533D",
+      "deployer": "0x26A3B0F45fCA655Cb6C2c0498C6870394A5a8b93",
+      "proxyDeployer": "0x311837955A39a29D37E3bb506d3aca32365F0511"
+    },
+    "rpc": "http://localhost:8500/2",
+    "tokenName": "Avax",
+    "tokenSymbol": "AVAX"
+  }
+]
