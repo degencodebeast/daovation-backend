@@ -1,5 +1,7 @@
 {   "Binance": 3,
     "Avalanche": 2,
     "Polygon": 2,
-    "Moonbeam": 12
+    "Moonbeam": 12,
+    "Arbitrum" : 15,
+    "Fantom": 2
   }

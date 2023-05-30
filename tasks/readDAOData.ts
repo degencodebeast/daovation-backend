@@ -12,46 +12,53 @@ const {defaultAbiCoder} = utils;
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let GovernanceTokenAddr = "0x63C69067938eB808187c8cCdd12D5Bcf0375b2Ac";
-const moonBeamDAOAddr = "0x1dDabA87ec15241eEAC057FBC37C5F00CeBCEd34"
+
+let governanceTokenAddr = "0x7694249fee47Ea83ad709a2e3A25316c4435Fa54";
+let DAOAddress = "0x4c6E030CFD6B8f280C72E28347CD3E9177e8BF7E";
+let satelliteAddr = "0xa23f9EA386C03DA4114d80DA80fb64DF544D28dF";
+
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
-const spokeChainNames = ["Moonbeam", "Avalanche"];
-const spokeChainIds:any = [];ethers
+const spokeChainNames = ["Fantom", "Avalanche"];
+const spokeChainIds:any = [];
 
-let hubChain = 'Moonbeam'
+let hubChain = 'Polygon'
 
 const chain = chains.find((chain: any) => chain.name === hubChain);
 const provider = getDefaultProvider(chain.rpc);
 const connectedWallet = wallet.connect(provider);
 
-
-
-
+function convertToUnits(_tx: any) {
+    let arr: any = [];
+    for(let i = 0; i < _tx.length; i++) {
+    let result = Number(_tx[i]);
+    arr.push(result);
+    }
+    return arr;
+}
 
 export async function main() {
     await readDAOData();
    
- 
 }
 
 
 
 async function readDAOData() {
 
-    
     const crossChainDAOFactory =  new CrossChainDAO__factory(connectedWallet);
-    const crossChainDAOInstance = crossChainDAOFactory.attach(moonBeamDAOAddr);
+    const crossChainDAOInstance = crossChainDAOFactory.attach(DAOAddress);
 
-    let spokeChainZero;
+    let allProposalIds: any;
     
     try {
-        spokeChainZero = await crossChainDAOInstance.spokeChains(0);
-        console.log(`[source] crossChainDAOInstance.spokeChains(0):`, spokeChainZero);
-        
+        let tx = await crossChainDAOInstance.getAllProposalIds();
+        console.log(convertToUnits(tx));
+             
+    
     } catch (error) {
-
+        console.log(`[source] CrossChainDAO.getAllProposalIds() ERROR!`);
         console.log(`[source]`, error);
         
     }

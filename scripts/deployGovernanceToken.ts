@@ -1,17 +1,17 @@
-import { utils, constants, BigNumber, getDefaultProvider} from 'ethers';
+import { utils, constants, BigNumber, getDefaultProvider } from 'ethers';
 import { ethers } from "ethers";
 import fs from "fs/promises";
-const {defaultAbiCoder} = utils;
-  const { deployUpgradable } = require("@axelar-network/axelar-gmp-sdk-solidity");
-  const {utils: {
+const { defaultAbiCoder } = utils;
+const { deployUpgradable } = require("@axelar-network/axelar-gmp-sdk-solidity");
+const { utils: {
     deployContract
-}} = require("@axelar-network/axelar-local-dev");
+} } = require("@axelar-network/axelar-local-dev");
 
 //import * as GovernanceToken from "../artifacts/contracts/GovernanceToken.sol/GovernanceToken.json" ;
 const GovernanceToken = require("../artifacts/contracts/GovernanceToken.sol/GovernanceToken.json");
 const ExampleProxy = require("../artifacts/contracts/ExampleProxy.sol/ExampleProxy.json");
 //import * as ExampleProxy from "../artifacts/contracts/ExampleProxy.sol/ExampleProxy.json";
-import {isTestnet, wallet} from "../config/constants";
+import { isTestnet, wallet } from "../config/constants";
 
 const name = 'KingToken';
 const symbol = 'KT';
@@ -24,20 +24,13 @@ let chains = isTestnet ? require("../config/testnet.json") : require("../config/
 
 // const chains = isTestnet ? testnetChainsRaw : localChainsRaw;
 
-// get chains
-//const chainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
-const chainNames2 = [ "Binance", "Avalanche", "Polygon"];
+const chainNames2 = ["Fantom", "Polygon", "Avalanche"];
 
 const chainsInfo: any = [];
 
-const moonBeamAddr = "0x63C69067938eB808187c8cCdd12D5Bcf0375b2Ac";
-const AvalancheAddr = "0x63C69067938eB808187c8cCdd12D5Bcf0375b2Ac";
 
-//0x4bd18F0f4226B8d7E4c321466B5B4DCe3e31ce31 most recent deployed address
-
-
-async function deploy(chain:any, wallet: any) {
+async function deploy(chain: any, wallet: any) {
     console.log(`Deploying Governance Token for ${chain.name}.`);
     const provider = getDefaultProvider(chain.rpc);
     const connectedWallet = wallet.connect(provider);
@@ -110,15 +103,16 @@ async function main() {
     //let cnIndex = 0;
     //const promises = [];
 
-    for(let i = 0; i < chainNames2.length; i++) {
-        let chainName  = chainNames2[i];
+    for (let i = 0; i < chainNames2.length; i++) {
+        let chainName = chainNames2[i];
         //let chainInfo = chainsInfo[i];
         let chainInfo = chains.find((chain: any) => {
-            if(chain.name === chainName){
-               chainsInfo.push(chain); 
-               return chain;
-        }});
-       
+            if (chain.name === chainName) {
+                chainsInfo.push(chain);
+                return chain;
+            }
+        });
+
         console.log(`Deploying [${chainName}]`);
         //promises.push(deploy(chainInfo, wallet));
         await deploy(chainInfo, wallet);
@@ -142,11 +136,11 @@ async function main() {
     // }
 }
 
-  
+
 main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
-  });
+});
 // module.exports = {
 //     deploy,
 //     execute

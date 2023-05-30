@@ -3,7 +3,7 @@
     "name": "Binance",
     "chainId": 2500,
     "gateway": "0x37a99f6117215dC3943FBB7eE5a8F83b22895e81",
-    "gasService": "0x9548171265Ba120bbCb3977aa697aD8474cdAf80",
+    "gasReceiver": "0x9548171265Ba120bbCb3977aa697aD8474cdAf80",
     "constAddressDeployer": "0x69aeB7Dc4f2A86873Dae8D753DE89326Cf90a77a",
     "create3Deployer": "0x783E7717fD4592814614aFC47ee92568a495Ce0B",
     "tokens": {
@@ -25,7 +25,7 @@
     "name": "Polygon",
     "chainId": 2501,
     "gateway": "0xc7B788E88BAaB770A6d4936cdcCcd5250E1bbAd8",
-    "gasService": "0xC573c722e21eD7fadD38A8f189818433e01Ae466",
+    "gasReceiver": "0xC573c722e21eD7fadD38A8f189818433e01Ae466",
     "constAddressDeployer": "0x69aeB7Dc4f2A86873Dae8D753DE89326Cf90a77a",
     "create3Deployer": "0x783E7717fD4592814614aFC47ee92568a495Ce0B",
     "tokens": {
@@ -47,7 +47,7 @@
     "name": "Avalanche",
     "chainId": 2502,
     "gateway": "0x54C156f087EBA12a869E0CBb49548c3F55E80edC",
-    "gasService": "0xD3cB555CB530C3374B122242b15d2943445c31d6",
+    "gasReceiver": "0xD3cB555CB530C3374B122242b15d2943445c31d6",
     "constAddressDeployer": "0x69aeB7Dc4f2A86873Dae8D753DE89326Cf90a77a",
     "create3Deployer": "0x783E7717fD4592814614aFC47ee92568a495Ce0B",
     "tokens": {

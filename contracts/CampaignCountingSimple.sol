@@ -10,6 +10,7 @@ abstract contract CampaignCountingSimple {
     // The spokechain IDs that the Campaign manager expects to receive data from during the
     // collection phase
     uint32[] public spokeChains;
+
     string[] public spokeChainNames;
 
     constructor(

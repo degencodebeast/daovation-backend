@@ -27,15 +27,14 @@ contract CrossChainDAO is
 {
     //2. Governance tips for the flipside hackathon
 
-// Create a protocol that allows DAOs to engage in joint partnerships to be co-managed within a multi-sig.
+    // Create a protocol that allows DAOs to engage in joint partnerships to be co-managed within a multi-sig.
 
-// Feature tips:
+    // Feature tips:
 
-// - Jointly vote on proposals
-// - Coordinate on initiatives
-// - Post on forums
-// - Embed analytics into forum posts
-
+    // - Jointly vote on proposals
+    // - Coordinate on initiatives
+    // - Post on forums
+    // - Embed analytics into forum posts
 
     //Architectural flow
 
@@ -76,12 +75,31 @@ contract CrossChainDAO is
     mapping(uint256 => bool) public collectionFinished;
     mapping(uint256 => bool) public collectionStarted;
 
+    //event ProposalCreated(uint256 proposalId);
+
+    uint256[] public allProposalIds;
+
+    struct ProposalData {
+        uint256 proposalId;
+        address[] targets;
+        uint256[] values;
+        bytes[] calldatas;
+        string description;
+        address proposer;
+    }
+
+    ProposalData[] public allProposalData;
+
+    mapping(uint256 => ProposalData) public proposalIdToProposalData;
+
+    mapping(address => uint256[]) public proposerToProposalIds;
+
     constructor(
         IVotes _token,
         address _gateway,
         address _gasService,
-        bytes memory _spokeChains,
-        bytes memory _spokeChainNames
+        bytes memory _spokeChains, //satellite chain ids
+        bytes memory _spokeChainNames //satellite chain names
     )
         Governor("CrossChainDAO")
         GovernorSettings(0 /* 0 block */, 30 /* 6 minutes */, 0)
@@ -157,7 +175,8 @@ contract CrossChainDAO is
     //option = 1
     function requestCollections(
         uint256 _proposalId,
-        address _satelliteAddr
+        address _satelliteAddr,
+        uint256[] memory spokeChainFees
     ) public payable {
         require(
             block.number > proposalDeadline(_proposalId),
@@ -172,10 +191,12 @@ contract CrossChainDAO is
 
         //sends an empty message to each of the aggregators. If they receive a
         // message at all, it is their cue to send data back
-        uint256 crossChainFee = msg.value / spokeChains.length;
-        for (uint16 i = 0; i < spokeChains.length; i++) {
+        //uint256 crossChainFee = msg.value / spokeChainNames.length;
+        for (uint16 i = 0; i < spokeChainNames.length; i++) {
+            uint256 crossChainFee = spokeChainFees[i];
+            require(msg.value >= crossChainFee, "transaction fee isn't enough");
             // using "1" as the function selector
-            bytes memory payload = abi.encode(1, abi.encode(_proposalId));
+            bytes memory payload = abi.encode(uint16(1), _proposalId);
             gasService.payNativeGasForContractCall{value: crossChainFee}(
                 address(this), //sender
                 spokeChainNames[i], //destination chain
@@ -194,6 +215,30 @@ contract CrossChainDAO is
         }
     }
 
+    function getAllProposalIds()
+        public
+        view
+        returns (uint256[] memory _allProposalIds)
+    {
+        _allProposalIds = allProposalIds;
+    }
+
+    function getAllProposalData() public view returns (ProposalData[] memory) {
+        return allProposalData;
+    }
+
+    function getParticularProposalData(
+        uint256 _proposalId
+    ) public view returns (ProposalData memory proposalData) {
+        proposalData = proposalIdToProposalData[_proposalId];
+    }
+
+    function getProposalIdsByProposer(
+        address proposer
+    ) public view returns (uint256[] memory proposalIds) {
+        proposalIds = proposerToProposalIds[proposer];
+    }
+
     //This function will receive cross chain voting data
     function _execute(
         string calldata sourceChain,
@@ -209,7 +254,7 @@ contract CrossChainDAO is
         uint32 _srcChainId = spokeChainNameToChainId[sourceChain];
         uint16 option;
         assembly {
-            option := mload(add(_payload, 32))
+            option := byte(1, mload(add(_payload, 32)))
         }
 
         // Some options for cross-chain actions are: propose, vote, vote with reason,
@@ -272,30 +317,51 @@ contract CrossChainDAO is
     // the IDs of which is being stored in the CrossChainGovernorCountingSimple contract
 
     //option = 0
+    //can only be called on Polygon - the main chain (hub)
+    //satellite - avalanche, fantom/arbitrum
+
     function crossChainPropose(
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description,
-        address _satelliteAddr
+        address _satelliteAddr,
+        uint256[] memory spokeChainFees
     ) public payable virtual returns (uint256) {
-        uint256 proposalId = super.propose(
+        uint256 _proposalId = super.propose(
             targets,
             values,
             calldatas,
             description
         );
 
+        ProposalData memory proposalData = ProposalData(
+            _proposalId,
+            targets,
+            values,
+            calldatas,
+            description,
+            msg.sender
+        );
+        allProposalData.push(proposalData);
         //sends the proposal to all of the other chains
-        if (spokeChains.length > 0) {
-            uint256 crossChainFee = msg.value / spokeChains.length;
+        if (spokeChainNames.length > 0) {
+            //uint256 crossChainFee = msg.value / spokeChainNames.length;
 
             //Iterate over every spoke chain
-            for (uint16 i = 0; i < spokeChains.length; i++) {
+            for (uint16 i = 0; i < spokeChainNames.length; i++) {
                 // using "0" as the function selector for destination contract
+                uint256 crossChainFee = spokeChainFees[i];
+                require(msg.value >= crossChainFee, "transaction fee isn't enough");
                 bytes memory payload = abi.encode(
-                    0,
-                    abi.encode(proposalId, block.timestamp)
+                    uint16(0),
+                    _proposalId,
+                    block.timestamp,
+                    proposalData.targets,
+                    proposalData.values,
+                    proposalData.calldatas,
+                    proposalData.description,
+                    proposalData.proposer
                 );
 
                 // Send a cross-chain message with axelar to the chain in the iterator
@@ -310,15 +376,19 @@ contract CrossChainDAO is
                 );
 
                 gateway.callContract(
-                    spokeChainNames[i],
+                    spokeChainNames[i], //destination chain name
                     //address(this).toString(),
-                    _satelliteAddr.toString(),
-                    payload
+                    _satelliteAddr.toString(), //destination address
+                    payload //payload
                 );
             }
-        }
 
-        return proposalId;
+            //emit ProposalCreated(_proposalId);
+        }
+        proposalIdToProposalData[_proposalId] = proposalData;
+        proposerToProposalIds[msg.sender].push(_proposalId);
+        allProposalIds.push(_proposalId);
+        return _proposalId;
     }
 
     function quorum(
@@ -355,4 +425,6 @@ contract CrossChainDAO is
     {
         return super.proposalThreshold();
     }
+
+    function executeProposal() public {}
 }

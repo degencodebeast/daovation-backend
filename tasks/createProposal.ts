@@ -8,19 +8,23 @@ import { isTestnet, wallet } from "../config/constants";
 
 const { defaultAbiCoder } = utils;
 
-const satelliteAddr: any = "0x47A62Af19657263E3E0b60312f97F7464F70Ba35";
+const satelliteAddr: any = "0xa23f9EA386C03DA4114d80DA80fb64DF544D28dF";
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let GovernanceTokenAddr = "0x63C69067938eB808187c8cCdd12D5Bcf0375b2Ac";
-const BinanceDAOAddr = "0x558388D8Ebcf227D6cF1C1b8345754259800CA3F"
+let GovernanceTokenAddr = "0x7694249fee47Ea83ad709a2e3A25316c4435Fa54";
+const BinanceDAOAddr = "0x4c6E030CFD6B8f280C72E28347CD3E9177e8BF7E"
+
+
+
+
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
-const spokeChainNames = ["Polygon", "Avalanche"];
-const spokeChainIds: any = []; ethers
+const spokeChainNames = ["Fantom", "Avalanche"];
+const spokeChainIds: any = [];
 
-let hubChain = 'Binance';
+let hubChain = 'Polygon';
 
 const chain = chains.find((chain: any) => chain.name === hubChain);
 const provider = getDefaultProvider(chain.rpc);
@@ -31,7 +35,7 @@ const connectedWallet = wallet.connect(provider);
 
 
 export async function main() {
-  await createProposal('Proposal for me to be given 100 BNB!');
+  await createProposal('Proposal for me to be given 1000 BNB!');
 
 
 }
@@ -58,18 +62,20 @@ async function createProposal(description: string) {
 
   console.log('creatingProposal...')
 
-  const result = await (await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, { value: "10000000000000000" })).wait();
-  const proposalCreatedEvents = result.events?.filter((event: any) => event.event === 'ProposalCreated');
+const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, { value: "10000000000000000000" })
+const result = await tx.wait();  
+console.log("Proposal created");
+// const proposalCreatedEvents = result.events?.filter((event: any) => event.event === 'ProposalCreated');
 
-  if (proposalCreatedEvents && proposalCreatedEvents.length > 0) {
-    // @ts-ignore
-    const proposalId = proposalCreatedEvents[0].args.proposalId;
+//   if (proposalCreatedEvents && proposalCreatedEvents.length > 0) {
+    
+//     const proposalId = proposalCreatedEvents[0].args?.proposalId;
 
 
-    console.log("Proposal ID:", proposalId.toString());
-  } else {
-    console.log("No 'ProposalCreated' events found in the result.");
-  }
+//     console.log("Proposal ID:", proposalId.toString());
+//   } else {
+//     console.log("No 'ProposalCreated' events found in the result.");
+//   }
 
 
 }

@@ -11,7 +11,7 @@ const DAOSatelliteAddress:string = ""
 //let sateliteChain = 'Moonbeam'
 const DAOAddress: string = ""
 
-let hubChain = "Binance";
+let hubChain = "Polygon"
 
     
 
@@ -28,7 +28,5 @@ export async function requestCollections(_chain: string, wallet: any, satelliteA
         const txReceipt = await tx.wait();
         console.log("You just requested collections of votes from all spoke chains");
         console.log(`...tx: ${txReceipt.transactionHash}`);
-
-
 
 }

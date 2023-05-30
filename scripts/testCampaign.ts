@@ -8,6 +8,7 @@ const account1 = "0xBcd4042DE499D14e55001CcbB24a551F3b954096"
 const deployer = new ethers.Wallet(privateKey, provider);
 
 
+
 function convertToUnits(_tx: any) {
     let arr = [];
     for(let i = 0; i < _tx.length; i++) {
@@ -16,7 +17,6 @@ function convertToUnits(_tx: any) {
     }
     return arr;
 }
-
 
 
 const targetInEther = ethers.utils.parseEther("10");

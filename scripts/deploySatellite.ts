@@ -20,21 +20,27 @@ let targetSecondsPerBlockObj = require("../config/targetSecondsPerBlock.json");
 
 //let moonBeamSatelliteAddr 
 
-const spokeChainNames = ["Avalanche", "Polygon"];
+const spokeChainNames = ["Fantom", "Avalanche"];
 const daoSatellite = require("../artifacts/contracts/DAOSatellite.sol/DAOSatellite.json");
 const ExampleProxy = require("../artifacts/contracts/ExampleProxy.sol/ExampleProxy.json");
 
 let chainsInfo: any = [];
 
-let hubChain = "Binance";
+let hubChain = "Polygon";
 
-let governanceTokenAddr = "0xF3701c7dAAa71f3622a47e49Cc0C1Dfae8C6Ce4c";
-let satelliteAddr = "0xd2f449C10c16C4395f00adE7287f29db2fedeA45";
+let governanceTokenAddr = "0x7694249fee47Ea83ad709a2e3A25316c4435Fa54";
+let DAOAddress = "0x4c6E030CFD6B8f280C72E28347CD3E9177e8BF7E";
+let satelliteAddr = "0xa23f9EA386C03DA4114d80DA80fb64DF544D28dF";
+
+const gasLimit = 30000000;
+
+
+
 
 //let spokeChain = "Moonbeam";
 
 
-async function deploy(_hubChain: string, chain: any, wallet: any, governanceToken: string, targetSecondsPerBlock: number) {
+async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wallet: any, governanceToken: string, targetSecondsPerBlock: number) {
     console.log(`Deploying Satellite for ${chain.name}.`);
     const provider = getDefaultProvider(chain.rpc);
     const connectedWallet = wallet.connect(provider);
@@ -43,7 +49,7 @@ async function deploy(_hubChain: string, chain: any, wallet: any, governanceToke
         connectedWallet,
         daoSatellite,
         ExampleProxy,
-        [_hubChain, chain.gateway, chain.gasReceiver, governanceToken, targetSecondsPerBlock],
+        [_hubChain, _hubChainAddr, chain.gateway, chain.gasReceiver, governanceToken, targetSecondsPerBlock],
         [],
         //defaultAbiCoder.encode(['string'], [chain.name]),
         defaultAbiCoder.encode(['string'], [chain.name]),
@@ -76,7 +82,7 @@ async function main() {
 
         console.log(`Deploying [${chainName}]`);
 
-        await deploy(hubChain, chainInfo, wallet, governanceTokenAddr, targetSecond);
+        await deploy(hubChain, DAOAddress, chainInfo, wallet, governanceTokenAddr, targetSecond);
 
     }
 

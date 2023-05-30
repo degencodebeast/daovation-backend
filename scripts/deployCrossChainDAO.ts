@@ -16,15 +16,15 @@ const { utils: {
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let GovernanceTokenAddr = "0xF3701c7dAAa71f3622a47e49Cc0C1Dfae8C6Ce4c";
-const BinanceDAOAddr = "0x558388D8Ebcf227D6cF1C1b8345754259800CA3F"
+let GovernanceTokenAddr = "0x7694249fee47Ea83ad709a2e3A25316c4435Fa54";
+const BinanceDAOAddr = "0x4c6E030CFD6B8f280C72E28347CD3E9177e8BF7E"
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
-const spokeChainNames = ["Polygon", "Avalanche"];
+const spokeChainNames = ["Fantom", "Avalanche"];
 const spokeChainIds: any = [];
 
-const HubChain = "Binance";
+const HubChain = "Polygon";
 //const satellitedAddr: any = "";
 
 let encodedSpokeChainIds: any;
