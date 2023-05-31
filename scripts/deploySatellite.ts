@@ -31,7 +31,7 @@ let hubChain = "Polygon";
 
 let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
 let DAOAddress = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
-let satelliteAddr = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
+let satelliteAddr = "";
 
 
 
@@ -44,7 +44,7 @@ async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wall
     console.log(`Deploying Satellite for ${chain.name}.`);
     const provider = getDefaultProvider(chain.rpc);
     const connectedWallet = wallet.connect(provider);
-    const myGasLimit = BigNumber.from("14999999");
+    //const myGasLimit = BigNumber.from("14999999");
     //const myGasLimit2 = 700000;
     //const options = { 800000 };
     const contract = await deployUpgradable(
@@ -56,8 +56,8 @@ async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wall
         [],
         //defaultAbiCoder.encode(['string'], [chain.name]),
         defaultAbiCoder.encode(['string'], [chain.name]),
-        'satellite',
-      myGasLimit
+        'satellite'
+      //myGasLimit
     );
     chain.contract = contract;
     console.log(`Deployed Satellite for ${chain.name} at ${chain.contract.address}`);
