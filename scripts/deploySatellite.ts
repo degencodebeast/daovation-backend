@@ -10,6 +10,7 @@ import { isTestnet, wallet } from "../config/constants";
 const { defaultAbiCoder } = utils;
 
 const { deployUpgradable } = require("@axelar-network/axelar-gmp-sdk-solidity");
+
 const { utils: {
     deployContract
 } } = require("@axelar-network/axelar-local-dev");
@@ -20,7 +21,7 @@ let targetSecondsPerBlockObj = require("../config/targetSecondsPerBlock.json");
 
 //let moonBeamSatelliteAddr 
 
-const spokeChainNames = ["Fantom", "Avalanche"];
+const spokeChainNames = ["Avalanche", "Fantom" ];
 const daoSatellite = require("../artifacts/contracts/DAOSatellite.sol/DAOSatellite.json");
 const ExampleProxy = require("../artifacts/contracts/ExampleProxy.sol/ExampleProxy.json");
 
@@ -29,10 +30,9 @@ let chainsInfo: any = [];
 let hubChain = "Polygon";
 
 let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
-let DAOAddress = "0x2fBd59409D09F7D7233cc04F4155a24921C2F1cC";
-let satelliteAddr = "0x412df091D549Ff8C3E7d538DBa2e0B5d0eA895eb";
+let DAOAddress = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
+let satelliteAddr = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
 
-const gasLimit = 30000000;
 
 
 
@@ -44,6 +44,9 @@ async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wall
     console.log(`Deploying Satellite for ${chain.name}.`);
     const provider = getDefaultProvider(chain.rpc);
     const connectedWallet = wallet.connect(provider);
+    const myGasLimit = BigNumber.from("14999999");
+    //const myGasLimit2 = 700000;
+    //const options = { 800000 };
     const contract = await deployUpgradable(
         chain.constAddressDeployer,
         connectedWallet,
@@ -53,7 +56,8 @@ async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wall
         [],
         //defaultAbiCoder.encode(['string'], [chain.name]),
         defaultAbiCoder.encode(['string'], [chain.name]),
-        'satellite'
+        'satellite',
+      myGasLimit
     );
     chain.contract = contract;
     console.log(`Deployed Satellite for ${chain.name} at ${chain.contract.address}`);
@@ -110,3 +114,5 @@ main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
 });
+
+
