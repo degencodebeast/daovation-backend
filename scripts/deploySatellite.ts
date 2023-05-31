@@ -28,9 +28,9 @@ let chainsInfo: any = [];
 
 let hubChain = "Polygon";
 
-let governanceTokenAddr = "0x7694249fee47Ea83ad709a2e3A25316c4435Fa54";
-let DAOAddress = "0x4c6E030CFD6B8f280C72E28347CD3E9177e8BF7E";
-let satelliteAddr = "0xa23f9EA386C03DA4114d80DA80fb64DF544D28dF";
+let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
+let DAOAddress = "0x2fBd59409D09F7D7233cc04F4155a24921C2F1cC";
+let satelliteAddr = "0x412df091D549Ff8C3E7d538DBa2e0B5d0eA895eb";
 
 const gasLimit = 30000000;
 
@@ -56,7 +56,7 @@ async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wall
         'satellite'
     );
     chain.contract = contract;
-    console.log(`Deployed Satellite for ${chain.name} at ${chain.contract.address}.`);
+    console.log(`Deployed Satellite for ${chain.name} at ${chain.contract.address}`);
 }
 
 let targetSecond: any;

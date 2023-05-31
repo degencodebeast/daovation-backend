@@ -59,11 +59,11 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         uint256 localVoteStart;
         bool voteFinished;
         uint256 proposalId;
-        address[] targets;
-        uint256[] values;
-        bytes[] calldatas;
+        //address[] targets;
+        //uint256[] values;
+        //bytes[] calldatas;
         string description;
-        address proposer;
+        //address proposer;
     }
 
     constructor(
@@ -123,7 +123,7 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         // );
         uint16 option;
         assembly {
-            option := byte(1, mload(add(_payload, 32)))
+            option := mload(add(_payload, 32))
         }
         // Do 1 of 2 things:
         if (option == 0) {
@@ -138,22 +138,22 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
                 ,
                 uint256 proposalId,
                 uint256 proposalStart,
-                address[] memory targets,
-                uint256[] memory values,
-                bytes[] memory calldatas,
-                string memory description,
-                address proposer
+                //address[] memory targets,
+                //uint256[] memory values,
+                //bytes[] memory calldatas,
+                string memory description
+                //address proposer
             ) = abi.decode(
                     _payload,
                     (
                         uint16,
                         uint256,
                         uint256,
-                        address[],
-                        uint256[],
-                        bytes[],
-                        string,
-                        address
+                        //address[],
+                        //uint256[],
+                        //bytes[],
+                        string
+                        //address
                     )
                 );
             require(
@@ -181,15 +181,15 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
                 cutOffBlockEstimation,
                 false,
                 proposalId,
-                targets,
-                values,
-                calldatas,
-                description,
-                proposer
+                //targets,
+                //values,
+                //calldatas,
+                description
+                //proposer
             );
             allProposalIds.push(proposalId);
             proposalIdToProposal[proposalId] = remoteProposal;
-            proposerToProposalIds[remoteProposal.proposer].push(proposalId);
+            //proposerToProposalIds[remoteProposal.proposer].push(proposalId);
             allProposalData.push(remoteProposal);
 
             //The calculations in the above snippet are not enough to ensure a correct setup. While it

@@ -42,7 +42,7 @@ async function deploy(chain: any, wallet: any) {
         [chain.gateway, chain.gasReceiver],
         [],
         defaultAbiCoder.encode(['string'], [chain.name]),
-        'governance-token'
+        'governance-token',
     );
     chain.contract = contract;
     console.log(`Deployed Governance Token for ${chain.name} at ${chain.contract.address}.`);

@@ -187,6 +187,12 @@ contract CrossChainDAO is
             "Collection phase for this proposal has already started"
         );
 
+        uint256 totalFee;
+        for (uint i = 0; i < spokeChainFees.length; i++) {
+            totalFee += spokeChainFees[i];
+        }
+        require(msg.value >= totalFee, "insufficient gas fee for transaction");
+
         collectionStarted[_proposalId] = true;
 
         //sends an empty message to each of the aggregators. If they receive a
@@ -194,7 +200,7 @@ contract CrossChainDAO is
         //uint256 crossChainFee = msg.value / spokeChainNames.length;
         for (uint16 i = 0; i < spokeChainNames.length; i++) {
             uint256 crossChainFee = spokeChainFees[i];
-            require(msg.value >= crossChainFee, "transaction fee isn't enough");
+            //require(msg.value >= crossChainFee, "transaction fee isn't enough");
             // using "1" as the function selector
             bytes memory payload = abi.encode(uint16(1), _proposalId);
             gasService.payNativeGasForContractCall{value: crossChainFee}(
@@ -254,7 +260,7 @@ contract CrossChainDAO is
         uint32 _srcChainId = spokeChainNameToChainId[sourceChain];
         uint16 option;
         assembly {
-            option := byte(1, mload(add(_payload, 32)))
+            option := mload(add(_payload, 32))
         }
 
         // Some options for cross-chain actions are: propose, vote, vote with reason,
@@ -277,7 +283,6 @@ contract CrossChainDAO is
     ) internal virtual {
         (
             ,
-            //uint16 option
             uint256 _proposalId,
             uint256 _for,
             uint256 _against,
@@ -328,6 +333,11 @@ contract CrossChainDAO is
         address _satelliteAddr,
         uint256[] memory spokeChainFees
     ) public payable virtual returns (uint256) {
+        uint256 totalFee;
+        for (uint i = 0; i < spokeChainFees.length; i++) {
+            totalFee += spokeChainFees[i];
+        }
+        require(msg.value >= totalFee, "insufficient gas fee for transaction");
         uint256 _proposalId = super.propose(
             targets,
             values,
@@ -345,6 +355,7 @@ contract CrossChainDAO is
         );
         allProposalData.push(proposalData);
         //sends the proposal to all of the other chains
+        // NOTE: I could also provide the time end, but that should be done with a timestamp as well
         if (spokeChainNames.length > 0) {
             //uint256 crossChainFee = msg.value / spokeChainNames.length;
 
@@ -352,16 +363,19 @@ contract CrossChainDAO is
             for (uint16 i = 0; i < spokeChainNames.length; i++) {
                 // using "0" as the function selector for destination contract
                 uint256 crossChainFee = spokeChainFees[i];
-                require(msg.value >= crossChainFee, "transaction fee isn't enough");
+                // require(
+                //     msg.value >= crossChainFee,
+                //     "transaction fee isn't enough"
+                // );
                 bytes memory payload = abi.encode(
                     uint16(0),
                     _proposalId,
                     block.timestamp,
-                    proposalData.targets,
-                    proposalData.values,
-                    proposalData.calldatas,
-                    proposalData.description,
-                    proposalData.proposer
+                    //proposalData.targets,
+                    //proposalData.values,
+                    //proposalData.calldatas,
+                    proposalData.description
+                    //proposalData.proposer
                 );
 
                 // Send a cross-chain message with axelar to the chain in the iterator
@@ -427,4 +441,9 @@ contract CrossChainDAO is
     }
 
     function executeProposal() public {}
+
+    //function getSpokeVotes(uint256 chainId, uint256 proposalId) public {}
+
+    function getAllVotes() public {}
+
 }

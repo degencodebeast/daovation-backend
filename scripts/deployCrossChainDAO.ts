@@ -16,8 +16,8 @@ const { utils: {
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let GovernanceTokenAddr = "0x7694249fee47Ea83ad709a2e3A25316c4435Fa54";
-const BinanceDAOAddr = "0x4c6E030CFD6B8f280C72E28347CD3E9177e8BF7E"
+let GovernanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
+const PolygonDAOAddr = "0x2fBd59409D09F7D7233cc04F4155a24921C2F1cC"
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 

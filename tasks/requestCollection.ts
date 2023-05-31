@@ -15,18 +15,18 @@ let hubChain = "Polygon"
 
     
 
-export async function requestCollections(_chain: string, wallet: any, satelliteAddr: string, proposalId: any) {
+// export async function requestCollections(_chain: string, wallet: any, satelliteAddr: string, proposalId: any) {
 
-        const chain = chains.find((chain: any) => chain.name === _chain);
-        const provider = getDefaultProvider(chain.rpc);
-        const connectedWallet = wallet.connect(provider);
+//         const chain = chains.find((chain: any) => chain.name === _chain);
+//         const provider = getDefaultProvider(chain.rpc);
+//         const connectedWallet = wallet.connect(provider);
 
-        const crossChainDAOFactory = new CrossChainDAO__factory(connectedWallet);
-        const crossChainDAOInstance = crossChainDAOFactory.attach(DAOAddress);
+//         const crossChainDAOFactory = new CrossChainDAO__factory(connectedWallet);
+//         const crossChainDAOInstance = crossChainDAOFactory.attach(DAOAddress);
 
-        const tx = await crossChainDAOInstance.requestCollections(proposalId, satelliteAddr, { value: "10000000000000000" });
-        const txReceipt = await tx.wait();
-        console.log("You just requested collections of votes from all spoke chains");
-        console.log(`...tx: ${txReceipt.transactionHash}`);
+//         const tx = await crossChainDAOInstance.requestCollections(proposalId, satelliteAddr, { value: "10000000000000000" });
+//         const txReceipt = await tx.wait();
+//         console.log("You just requested collections of votes from all spoke chains");
+//         console.log(`...tx: ${txReceipt.transactionHash}`);
 
-}
+// }

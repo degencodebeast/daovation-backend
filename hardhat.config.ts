@@ -42,6 +42,7 @@ const config: HardhatUserConfig = {
       optimizer: {
         enabled: true,
         runs: 200,
+       
         details: {
           peephole: true,
           inliner: true,
@@ -62,7 +63,8 @@ const config: HardhatUserConfig = {
   },
   typechain: {
     target: "ethers-v5"
-  }
+  },
+  
 };
 
 export default config;

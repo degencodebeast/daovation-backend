@@ -62,6 +62,8 @@ abstract contract CrossChainGovernorCountingSimple is Governor {
         bool initialized; //This checks whether data was received from the spoke chains or not
     }
 
+    //SpokeProposalVote[] public spokeProposalVotes;
+
     //The new SpokeProposalVote struct is very similar to the ProposalVote struct. Can you think
     //of a more optimal data structure for the smart contract that requires only one struct?
 
