@@ -12,6 +12,8 @@ import "@openzeppelin/contracts/utils/Timers.sol";
 import "@openzeppelin/contracts/utils/Checkpoints.sol";
 import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {Upgradable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/upgradable/Upgradable.sol";
+import {Selector} from "./Selector.sol";
+
 
 contract DAOSatellite is AxelarExecutable, Upgradable {
     // The cross-chain DAO is never deployed on the spoke chains because it wouldn't be efficient to replicate all
@@ -22,6 +24,7 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
 
     using StringToAddress for string;
     using AddressToString for address;
+    using Selector for bytes;
 
     error AlreadyInitialized();
 
@@ -113,7 +116,7 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
     function _execute(
         string calldata /*sourceChain*/,
         string calldata sourceAddress,
-        bytes memory _payload
+        bytes calldata _payload
     ) internal override /*(AxelarExecutable)*/ {
         // string memory hubAddrString = hubChainAddr.toString();
         // require(
@@ -121,129 +124,139 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         //         keccak256(abi.encodePacked(hubAddrString)),
         //     "Only messages from the hub chain can be received!"
         // );
-        uint16 option;
-        assembly {
-            option := mload(add(_payload, 32))
-        }
+        bytes calldata payloadNoSig = _payload[4:];
+        bytes4 selector = _payload.getSelector();
         // Do 1 of 2 things:
-        if (option == 0) {
-            //Begin proposal on the chain, with local block times
+        if (selector == Selector.SET_PROPOSAL_SELECTOR) {
+            setProposalOnRemote(payloadNoSig);
+        } else if (selector == Selector.SEND_RESULTS_SELECTOR) {
+            sendResultsToHub(sourceAddress, payloadNoSig);
+        } else {
+            revert("Invalid payload: no selector match");
+        }
+    }
 
-            //To do this, decode the payload, which includes a proposal ID and the timestamp of when the proposal was made as mentioned in the CrossChainDAO section
-            //Perform some calculations to generate a cutOffBlockEstimation by subtracting blocks from the current block based on
-            //the timestamp and a predetermined seconds-per-block estimate
-            // Add a RemoteProposal struct to the proposals map, effectively registering the proposal and its voting-related data on the spoke chain
+    function setProposalOnRemote(bytes calldata _payload) internal {
+        //Begin proposal on the chain, with local block times
 
-            (
-                ,
-                uint256 proposalId,
-                uint256 proposalStart,
-                //address[] memory targets,
-                //uint256[] memory values,
-                //bytes[] memory calldatas,
-                string memory description
-                //address proposer
-            ) = abi.decode(
-                    _payload,
-                    (
-                        uint16,
-                        uint256,
-                        uint256,
-                        //address[],
-                        //uint256[],
-                        //bytes[],
-                        string
-                        //address
-                    )
-                );
-            require(
-                !isProposal(proposalId),
-                "Proposal ID must be unique, and not already set"
+        //To do this, decode the payload, which includes a proposal ID and the timestamp of when the proposal was made as mentioned in the CrossChainDAO section
+        //Perform some calculations to generate a cutOffBlockEstimation by subtracting blocks from the current block based on
+        //the timestamp and a predetermined seconds-per-block estimate
+        // Add a RemoteProposal struct to the proposals map, effectively registering the proposal and its voting-related data on the spoke chain
+
+        (
+            uint256 proposalId,
+            uint256 proposalStart,
+            //address[] memory targets,
+            //uint256[] memory values,
+            //bytes[] memory calldatas,
+            string memory description //address proposer
+        ) = abi.decode(
+                _payload,
+                (
+                    uint256,
+                    uint256,
+                    //address[],
+                    //uint256[],
+                    //bytes[],
+                    string
+                    //address
+                )
             );
+        require(
+            !isProposal(proposalId),
+            "Proposal ID must be unique, and not already set"
+        );
 
-            uint256 cutOffBlockEstimation = 0;
-            if (proposalStart < block.timestamp) {
-                uint256 blockAdjustment = (block.timestamp - proposalStart) /
-                    targetSecondsPerBlock;
-                if (blockAdjustment < block.number) {
-                    cutOffBlockEstimation = block.number - blockAdjustment;
-                } else {
-                    cutOffBlockEstimation = block.number;
-                }
+        uint256 cutOffBlockEstimation = 0;
+        if (proposalStart < block.timestamp) {
+            uint256 blockAdjustment = (block.timestamp - proposalStart) /
+                targetSecondsPerBlock;
+            if (blockAdjustment < block.number) {
+                cutOffBlockEstimation = block.number - blockAdjustment;
             } else {
                 cutOffBlockEstimation = block.number;
             }
-
-            RemoteProposal memory remoteProposal = proposalIdToProposal[
-                proposalId
-            ];
-            remoteProposal = RemoteProposal(
-                cutOffBlockEstimation,
-                false,
-                proposalId,
-                //targets,
-                //values,
-                //calldatas,
-                description
-                //proposer
-            );
-            allProposalIds.push(proposalId);
-            proposalIdToProposal[proposalId] = remoteProposal;
-            //proposerToProposalIds[remoteProposal.proposer].push(proposalId);
-            allProposalData.push(remoteProposal);
-
-            //The calculations in the above snippet are not enough to ensure a correct setup. While it
-            //may not matter as much when people can start voting, it does matter when the vote weight
-            //snapshot is made. If the vote weight snapshot is made too far apart between the spoke and
-            //hub chains, a user could send a token from one chain to another and effectively double their
-            //voting weight. Some example mitigation strategies are using oracles or editing the erc20votes contract
-            //to depend on timestamps instead of blocks but that also is open to attacks if block producers on two chains collude.
-            //In the meantime, the only strategy is to subtract blocks from the current block based on the timestamp and a predetermined
-            //seconds-per-block estimate.
-
-            //Now let's add logic to send vote results back to the hub chain:
-
-            //Retrieve the proposal ID from the cross-chain message
-            //Get the data for said proposal from the relevant map
-            //Encode that data into a payload as defined by the CrossChainDAO
-            //Send that data through Axelar
-        } else if (option == 1) {
-            //send vote results back to the hub chain
-            (, uint256 proposalId) = abi.decode(_payload, (uint16, uint256));
-            ProposalVote storage votes = proposalVotes[proposalId];
-            bytes memory votingPayload = abi.encode(
-                uint16(0),
-                proposalId,
-                votes.forVotes,
-                votes.againstVotes,
-                votes.abstainVotes
-            );
-
-            // Send a cross-chain message with axelar to the chain in the iterator
-            // NOTE: DAOSatellite needs to be funded beforehand, in the constructor.
-            // There are better solutions, such as cross-chain swaps being built in from the hub chain, but
-            // this is the easiest solution for demonstration purposes.
-            gasService.payNativeGasForContractCall{value: 0.1 ether}(
-                address(this), //sender
-                hubChain, //destination chain
-                sourceAddress, //destination contract address, would be same address with address(this) since we are using constant address deployer
-                votingPayload, //payload
-                //msg.sender //refund address //payable(address(this)) //test this later to see the one that is necessary to suit your needs
-                payable(address(this))
-            );
-
-            gateway.callContract(
-                hubChain, //destination chain
-                sourceAddress, //destination contract address, would be same address with address(this) since we are using constant address deployer, if not using constant deployer then will be "hubChainAddr"
-                votingPayload //payload
-            );
-            proposalIdToProposal[proposalId].voteFinished = true;
-
-            //The only issue here is that the gas payment for the cross-chain message's transaction on the hub chain must be included, and there is no simple way to
-            // receive it. There are options that could potentially avert this issue, as explained below, but for simplicity's sake, the satellite contract will have
-            //to be sent native currency every once in a while.
+        } else {
+            cutOffBlockEstimation = block.number;
         }
+
+        // RemoteProposal memory remoteProposal = proposalIdToProposal[
+        //     proposalId
+        // ];
+
+        proposalIdToProposal[proposalId] = RemoteProposal(
+            cutOffBlockEstimation,
+            false,
+            proposalId,
+            //targets,
+            //values,
+            //calldatas,
+            description
+            //proposer
+        );
+        allProposalIds.push(proposalId);
+        proposalIdToProposal[proposalId] = proposalIdToProposal[proposalId];
+        //proposerToProposalIds[remoteProposal.proposer].push(proposalId);
+        allProposalData.push(proposalIdToProposal[proposalId]);
+
+        //The calculations in the above snippet are not enough to ensure a correct setup. While it
+        //may not matter as much when people can start voting, it does matter when the vote weight
+        //snapshot is made. If the vote weight snapshot is made too far apart between the spoke and
+        //hub chains, a user could send a token from one chain to another and effectively double their
+        //voting weight. Some example mitigation strategies are using oracles or editing the erc20votes contract
+        //to depend on timestamps instead of blocks but that also is open to attacks if block producers on two chains collude.
+        //In the meantime, the only strategy is to subtract blocks from the current block based on the timestamp and a predetermined
+        //seconds-per-block estimate.
+
+        //Now let's add logic to send vote results back to the hub chain:
+
+        //Retrieve the proposal ID from the cross-chain message
+        //Get the data for said proposal from the relevant map
+        //Encode that data into a payload as defined by the CrossChainDAO
+        //Send that data through Axelar
     }
+
+    function sendResultsToHub(
+        string memory sourceAddress,
+        bytes calldata _payload
+    ) internal {
+        //send vote results back to the hub chain
+        uint256 proposalId = abi.decode(_payload, (uint256));
+        ProposalVote storage votes = proposalVotes[proposalId];
+        bytes memory votingPayload = abi.encode(
+            Selector.ON_RECEIVE_VOTING_DATA_SELECTOR,
+            proposalId,
+            votes.forVotes,
+            votes.againstVotes,
+            votes.abstainVotes
+        );
+
+        // Send a cross-chain message with axelar to the chain in the iterator
+        // NOTE: DAOSatellite needs to be funded beforehand, in the constructor.
+        // There are better solutions, such as cross-chain swaps being built in from the hub chain, but
+        // this is the easiest solution for demonstration purposes.
+        gasService.payNativeGasForContractCall{value: 0.1 ether}(
+            address(this), //sender
+            hubChain, //destination chain
+            sourceAddress, //destination contract address, would be same address with address(this) since we are using constant address deployer
+            votingPayload, //payload
+            //msg.sender //refund address //payable(address(this)) //test this later to see the one that is necessary to suit your needs
+            payable(address(this))
+        );
+
+        gateway.callContract(
+            hubChain, //destination chain
+            sourceAddress, //destination contract address, would be same address with address(this) since we are using constant address deployer, if not using constant deployer then will be "hubChainAddr"
+            votingPayload //payload
+        );
+        proposalIdToProposal[proposalId].voteFinished = true;
+
+        //The only issue here is that the gas payment for the cross-chain message's transaction on the hub chain must be included, and there is no simple way to
+        // receive it. There are options that could potentially avert this issue, as explained below, but for simplicity's sake, the satellite contract will have
+        //to be sent native currency every once in a while.
+    }
+
 
     function getAllProposalIds()
         public

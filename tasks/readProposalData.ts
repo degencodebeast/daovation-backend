@@ -12,19 +12,22 @@ const {defaultAbiCoder} = utils;
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let GovernanceTokenAddr = "0x63C69067938eB808187c8cCdd12D5Bcf0375b2Ac";
-const moonBeamDAOAddr = "0x1dDabA87ec15241eEAC057FBC37C5F00CeBCEd34"
+let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
+let DAOAddress = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
+let satelliteAddr = "0xD69E106223f50C6FCDD5B74Ba8c1bD0929cDf4fd";
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
-const spokeChainNames = ["Moonbeam", "Avalanche"];
+const spokeChainNames = ["Fantom", "Avalanche"];
 const spokeChainIds:any = [];ethers
 
-let hubChain = 'Moonbeam'
+let hubChain = 'Polygon'
 
 const chain = chains.find((chain: any) => chain.name === hubChain);
 const provider = getDefaultProvider(chain.rpc);
 const connectedWallet = wallet.connect(provider);
+
+const PolygonDAOAddr = "0x5d58EaF49B52A8Bf4C07B7D3517aB7BC04844D5e";
 
 
 export async function main() {
@@ -37,7 +40,7 @@ async function readDAOData() {
 
     
     const crossChainDAOFactory =  new CrossChainDAO__factory(connectedWallet);
-    const crossChainDAOInstance = crossChainDAOFactory.attach(moonBeamDAOAddr);
+    const crossChainDAOInstance = crossChainDAOFactory.attach(PolygonDAOAddr);
 
     let spokeChainZero: any;
     

@@ -13,8 +13,8 @@ const { defaultAbiCoder } = utils;
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
 let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
-let DAOAddress = "0xE876087C736d1108BBe256bB255dbeF3c13525b8";
-let satelliteAddr = "0x412df091D549Ff8C3E7d538DBa2e0B5d0eA895eb";
+let DAOAddress = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
+let satelliteAddr = "0xD69E106223f50C6FCDD5B74Ba8c1bD0929cDf4fd";
 
 
 

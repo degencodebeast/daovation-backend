@@ -20,6 +20,15 @@ abstract contract CrossChainGovernorCountingSimple is Governor {
         Abstain
     }
 
+    // bytes4 internal immutable SEND_RESULTS_SELECTOR =
+    //     bytes4(keccak256("sendResultsToHub(string, bytes)")); //1 - requestCollection
+    // bytes4 internal immutable SET_PROPOSAL_SELECTOR =
+    //     bytes4(keccak256("setProposalOnRemote(bytes)")); //0 - crossChainPropose
+    // bytes4 internal immutable ON_RECEIVE_VOTING_DATA_SELECTOR =
+    //     bytes4(keccak256("onReceiveSpokeVotingData(uint32, bytes)")); // - onReceiveSpokeVotingData
+    // bytes4 internal immutable REMOTE_EXECUTE_PROPOSAL_SELECTOR =
+    //     bytes4(keccak256("executeProposal(uint256)"));
+
     // The spokechain IDs that the DAO expects to receive data from during the
     // collection phase
     uint32[] public spokeChains;

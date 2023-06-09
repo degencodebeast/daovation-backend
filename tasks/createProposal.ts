@@ -20,8 +20,8 @@ let chains = isTestnet ? require("../config/testnet.json") : require("../config/
 
 
 let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
-let DAOAddress = "0xE876087C736d1108BBe256bB255dbeF3c13525b8";
-let satelliteAddr = "0x412df091D549Ff8C3E7d538DBa2e0B5d0eA895eb";
+let DAOAddress = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
+let satelliteAddr = "0xD69E106223f50C6FCDD5B74Ba8c1bD0929cDf4fd";
 
 const daoInteractAddress = "0x4796e4dd4dEaE309D6bA19c6b42c5a7cc77d2537";
 
@@ -54,8 +54,8 @@ export async function main() {
         sender,
         receiverChains[i],
         gasToken,
-        500000,
-        1
+        700000,
+        1.7
       );
       //let result = getGasFee(sender, receiverChains[i], gasToken);
       feesArr.push(result);
@@ -92,7 +92,7 @@ export async function main() {
 
     console.log('creatingProposal...')
 
-    let description = 'Proposal for me to be given 1000 BNB!'
+    let description = 'Proposal for me to be given 100000 BNB!'
 
     //const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, feesArray, { value: "10000000000000000000" })
     const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, fees, { value: totalFees })

@@ -5,11 +5,11 @@ pragma solidity ^0.8.9;
 import {IAxelarGasService} from "@axelar-network/axelar-cgp-solidity/contracts/interfaces/IAxelarGasService.sol";
 import {IAxelarGateway} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
 import {AxelarExecutable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/executable/AxelarExecutable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+//import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 //import { IInterchainTokenLinker } from "./token-linker/contracts/interfaces/IInterchainTokenLinker.sol";
-import {Upgradable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/upgradable/Upgradable.sol";
+//import {Upgradable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/upgradable/Upgradable.sol";
 import {StringToAddress, AddressToString} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/utils/AddressString.sol";
-import {StringToBytes32, Bytes32ToString} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/utils/Bytes32String.sol";
+//import {StringToBytes32, Bytes32ToString} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/utils/Bytes32String.sol";
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/governance/Governor.sol";
@@ -17,6 +17,7 @@ import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 //import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
 import "./CrossChainGovernorCountingSimple.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
+import {Selector} from "./Selector.sol";
 
 contract CrossChainDAO is
     Governor,
@@ -67,6 +68,7 @@ contract CrossChainDAO is
 
     using StringToAddress for string;
     using AddressToString for address;
+    using Selector for bytes;
 
     // Whether or not the DAO finished the collection phase. It would be more efficient to add Collection as a status
     // in the Governor interface, but that would require editing the source file. It is a bit out of scope to completely
@@ -102,7 +104,7 @@ contract CrossChainDAO is
         bytes memory _spokeChainNames //satellite chain names
     )
         Governor("CrossChainDAO")
-        GovernorSettings(0 /* 0 block */, 30 /* 6 minutes */, 0)
+        GovernorSettings(0 /* 0 block */, 30 /* 6 minuteprops */, 0)
         GovernorVotes(_token)
         AxelarExecutable(_gateway)
         CrossChainGovernorCountingSimple(_spokeChains, _spokeChainNames)
@@ -119,6 +121,7 @@ contract CrossChainDAO is
 
     // function that checks whether or not that each of the spoke chains have sent in voting data before
     // a proposal is executed (which is found by checking initialized on a proposal on all chains)
+    //should be called by chainlink's automation
     function _beforeExecute(
         uint256 _proposalId,
         address[] memory _targets,
@@ -202,7 +205,8 @@ contract CrossChainDAO is
             uint256 crossChainFee = spokeChainFees[i];
             //require(msg.value >= crossChainFee, "transaction fee isn't enough");
             // using "1" as the function selector
-            bytes memory payload = abi.encode(uint16(1), _proposalId);
+            //bytes memory payload = abi.encode(uint16(1), _proposalId);
+            bytes memory payload = abi.encode(Selector.SEND_RESULTS_SELECTOR, _proposalId);
             gasService.payNativeGasForContractCall{value: crossChainFee}(
                 address(this), //sender
                 spokeChainNames[i], //destination chain
@@ -249,7 +253,7 @@ contract CrossChainDAO is
     function _execute(
         string calldata sourceChain,
         string calldata /*sourceAddress*/,
-        bytes memory _payload
+        bytes calldata _payload
     ) internal override /*(AxelarExecutable)*/ {
         // Gets a function selector option
 
@@ -258,36 +262,41 @@ contract CrossChainDAO is
         // here is that the _payload parameter points to a location in memory where a uint16
         // v(alue has been previously encoded.
         uint32 _srcChainId = spokeChainNameToChainId[sourceChain];
-        uint16 option;
-        assembly {
-            option := mload(add(_payload, 32))
-        }
-
+        bytes calldata payloadNoSig = _payload[4:];
+        bytes4 selector = _payload.getSelector();
         // Some options for cross-chain actions are: propose, vote, vote with reason,
         // vote with reason and params, cancel, etc.
-        if (option == 0) {
-            onReceiveSpokeVotingData(_srcChainId, _payload);
-        } else if (option == 1) {
+        if (selector == Selector.ON_RECEIVE_VOTING_DATA_SELECTOR) {
+           onReceiveSpokeVotingData(_srcChainId, payloadNoSig);
+        } else if (selector == Selector.REMOTE_EXECUTE_PROPOSAL_SELECTOR) {
             // TODO: Feel free to put your own cross-chain actions (propose, execute, etc.)
         } else {
             // TODO: You could revert here if you wanted to
+            revert("Invalid payload: no selector match");
         }
         //string memory message = abi.decode(_payload, (string));
     }
 
+    // function getSelector(bytes memory _data) private pure returns (bytes4 sig) {
+    //     assembly {
+    //         sig := mload(add(_data, 32))
+    //     }
+    // }
+
     //if you are implementing _execute from the governor contract remember to override it as well
     //we want to know for which proposal the data received is for, and initialize it to true that it has been received
+    
+    //if it has spokeProposalVote has been initialized to true, then it means that it has received voting data for that spoke chain
     function onReceiveSpokeVotingData(
         uint32 _srcChainId,
         bytes memory payload
     ) internal virtual {
         (
-            ,
             uint256 _proposalId,
             uint256 _for,
             uint256 _against,
             uint256 _abstain
-        ) = abi.decode(payload, (uint16, uint256, uint256, uint256, uint256));
+        ) = abi.decode(payload, (uint256, uint256, uint256, uint256));
 
         //as long as the received data isn't already initialized.._execute
         if (
@@ -368,7 +377,8 @@ contract CrossChainDAO is
                 //     "transaction fee isn't enough"
                 // );
                 bytes memory payload = abi.encode(
-                    uint16(0),
+                    //uint16(0),
+                    Selector.SET_PROPOSAL_SELECTOR,
                     _proposalId,
                     block.timestamp,
                     //proposalData.targets,
