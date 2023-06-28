@@ -5,11 +5,11 @@ pragma solidity ^0.8.9;
 import {IAxelarGasService} from "@axelar-network/axelar-cgp-solidity/contracts/interfaces/IAxelarGasService.sol";
 import {IAxelarGateway} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
 import {AxelarExecutable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/executable/AxelarExecutable.sol";
-//import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 //import { IInterchainTokenLinker } from "./token-linker/contracts/interfaces/IInterchainTokenLinker.sol";
-//import {Upgradable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/upgradable/Upgradable.sol";
+import {Upgradable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/upgradable/Upgradable.sol";
 import {StringToAddress, AddressToString} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/utils/AddressString.sol";
-//import {StringToBytes32, Bytes32ToString} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/utils/Bytes32String.sol";
+import {StringToBytes32, Bytes32ToString} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/utils/Bytes32String.sol";
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/governance/Governor.sol";
@@ -17,26 +17,16 @@ import "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 //import "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
 import "./CrossChainGovernorCountingSimple.sol";
 import "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import {Selector} from "./Selector.sol";
+
+//import {Selector} from "./Selector.sol";
 
 contract CrossChainDAO is
+    AxelarExecutable,
     Governor,
     GovernorSettings,
     CrossChainGovernorCountingSimple,
-    GovernorVotes,
-    AxelarExecutable
+    GovernorVotes
 {
-    //2. Governance tips for the flipside hackathon
-
-    // Create a protocol that allows DAOs to engage in joint partnerships to be co-managed within a multi-sig.
-
-    // Feature tips:
-
-    // - Jointly vote on proposals
-    // - Coordinate on initiatives
-    // - Post on forums
-    // - Embed analytics into forum posts
-
     //Architectural flow
 
     // Count votes from spoke chains
@@ -68,7 +58,7 @@ contract CrossChainDAO is
 
     using StringToAddress for string;
     using AddressToString for address;
-    using Selector for bytes;
+    //using Selector for bytes;
 
     // Whether or not the DAO finished the collection phase. It would be more efficient to add Collection as a status
     // in the Governor interface, but that would require editing the source file. It is a bit out of scope to completely
@@ -76,6 +66,22 @@ contract CrossChainDAO is
 
     mapping(uint256 => bool) public collectionFinished;
     mapping(uint256 => bool) public collectionStarted;
+
+    uint256[] public feesArray;
+    uint256[] public feesArray2;
+
+    bytes4 immutable SEND_RESULTS_TO_HUB_SELECTOR =
+        bytes4(keccak256("sendResultsToHub(uint256)")); //1 - requestCollection
+    bytes4 immutable SET_PROPOSAL_SELECTOR =
+        bytes4(keccak256("setProposalOnRemote(uint256, uint256, string)")); //0 - crossChainPropose
+    bytes4 immutable ON_RECEIVE_VOTING_DATA_SELECTOR =
+        bytes4(
+            keccak256(
+                "onReceiveSpokeVotingData(uint256, uint256, uint256, uint256)"
+            )
+        ); // - onReceiveSpokeVotingData
+    bytes4 immutable REMOTE_EXECUTE_PROPOSAL_SELECTOR =
+        bytes4(keccak256("executeProposal(uint256)"));
 
     //event ProposalCreated(uint256 proposalId);
 
@@ -88,6 +94,7 @@ contract CrossChainDAO is
         bytes[] calldatas;
         string description;
         address proposer;
+        uint256 proposalStart;
     }
 
     ProposalData[] public allProposalData;
@@ -104,7 +111,7 @@ contract CrossChainDAO is
         bytes memory _spokeChainNames //satellite chain names
     )
         Governor("CrossChainDAO")
-        GovernorSettings(0 /* 0 block */, 30 /* 6 minuteprops */, 0)
+        GovernorSettings(0 /* 0 block */, 30 /* 6 minutes */, 0)
         GovernorVotes(_token)
         AxelarExecutable(_gateway)
         CrossChainGovernorCountingSimple(_spokeChains, _spokeChainNames)
@@ -197,28 +204,25 @@ contract CrossChainDAO is
         require(msg.value >= totalFee, "insufficient gas fee for transaction");
 
         collectionStarted[_proposalId] = true;
-
-        //sends an empty message to each of the aggregators. If they receive a
-        // message at all, it is their cue to send data back
         //uint256 crossChainFee = msg.value / spokeChainNames.length;
         for (uint16 i = 0; i < spokeChainNames.length; i++) {
             uint256 crossChainFee = spokeChainFees[i];
+            feesArray2.push(crossChainFee);
             //require(msg.value >= crossChainFee, "transaction fee isn't enough");
-            // using "1" as the function selector
-            //bytes memory payload = abi.encode(uint16(1), _proposalId);
-            bytes memory payload = abi.encode(Selector.SEND_RESULTS_SELECTOR, _proposalId);
+            bytes memory payload = abi.encodeWithSignature(
+                "sendResultsToHub(uint256)",
+                _proposalId
+            );
             gasService.payNativeGasForContractCall{value: crossChainFee}(
                 address(this), //sender
                 spokeChainNames[i], //destination chain
-                //address(this).toString(), //destination contract address, would be same address with address(this) since we are using constant address deployer
                 _satelliteAddr.toString(),
                 payload,
-                msg.sender //refund address //payable(address(this)) //test this later to see the one that is necessary to suit your needs
+                msg.sender
             );
 
             gateway.callContract(
                 spokeChainNames[i],
-                //address(this).toString(),
                 _satelliteAddr.toString(),
                 payload
             );
@@ -254,39 +258,40 @@ contract CrossChainDAO is
         string calldata sourceChain,
         string calldata /*sourceAddress*/,
         bytes calldata _payload
-    ) internal override /*(AxelarExecutable)*/ {
-        // Gets a function selector option
-
-        //The code below loads a uint16 value from the memory location specified by the
-        // _payload parameter and assigns it to the option variable. The assumption
-        // here is that the _payload parameter points to a location in memory where a uint16
-        // v(alue has been previously encoded.
+    ) internal override(AxelarExecutable) {
+        //super._execute();
         uint32 _srcChainId = spokeChainNameToChainId[sourceChain];
         bytes calldata payloadNoSig = _payload[4:];
-        bytes4 selector = _payload.getSelector();
+        bytes4 selector = getSelector(_payload);
         // Some options for cross-chain actions are: propose, vote, vote with reason,
         // vote with reason and params, cancel, etc.
-        if (selector == Selector.ON_RECEIVE_VOTING_DATA_SELECTOR) {
-           onReceiveSpokeVotingData(_srcChainId, payloadNoSig);
-        } else if (selector == Selector.REMOTE_EXECUTE_PROPOSAL_SELECTOR) {
+        if (selector == ON_RECEIVE_VOTING_DATA_SELECTOR) {
+            onReceiveSpokeVotingData(_srcChainId, payloadNoSig);
+        } else if (selector == REMOTE_EXECUTE_PROPOSAL_SELECTOR) {
             // TODO: Feel free to put your own cross-chain actions (propose, execute, etc.)
+            callExecute();
         } else {
-            // TODO: You could revert here if you wanted to
+            // You could revert here if you wanted to
             revert("Invalid payload: no selector match");
         }
-        //string memory message = abi.decode(_payload, (string));
     }
 
-    // function getSelector(bytes memory _data) private pure returns (bytes4 sig) {
-    //     assembly {
-    //         sig := mload(add(_data, 32))
-    //     }
-    // }
+    function getSelector(
+        bytes memory _data
+    ) internal pure returns (bytes4 sig) {
+        assembly {
+            sig := mload(add(_data, 32))
+        }
+    }
+
+    function callExecute() public pure returns (string memory message) {
+        message = "You just called the execute proposal function from another chain";
+    }
 
     //if you are implementing _execute from the governor contract remember to override it as well
     //we want to know for which proposal the data received is for, and initialize it to true that it has been received
-    
-    //if it has spokeProposalVote has been initialized to true, then it means that it has received voting data for that spoke chain
+
+    //if a proposal on the spokeProposalVote struct has been initialized to true, then it means that it has received voting data for that spoke chain
     function onReceiveSpokeVotingData(
         uint32 _srcChainId,
         bytes memory payload
@@ -330,10 +335,6 @@ contract CrossChainDAO is
     //Then we'll modify it to send cross-chain messages with information on the proposal to every spoke chain,
     // the IDs of which is being stored in the CrossChainGovernorCountingSimple contract
 
-    //option = 0
-    //can only be called on Polygon - the main chain (hub)
-    //satellite - avalanche, fantom/arbitrum
-
     function crossChainPropose(
         address[] memory targets,
         uint256[] memory values,
@@ -354,13 +355,15 @@ contract CrossChainDAO is
             description
         );
 
+        uint256 _proposalTimeStart = block.timestamp;
         ProposalData memory proposalData = ProposalData(
             _proposalId,
             targets,
             values,
             calldatas,
             description,
-            msg.sender
+            msg.sender,
+            _proposalTimeStart
         );
         allProposalData.push(proposalData);
         //sends the proposal to all of the other chains
@@ -372,15 +375,12 @@ contract CrossChainDAO is
             for (uint16 i = 0; i < spokeChainNames.length; i++) {
                 // using "0" as the function selector for destination contract
                 uint256 crossChainFee = spokeChainFees[i];
-                // require(
-                //     msg.value >= crossChainFee,
-                //     "transaction fee isn't enough"
-                // );
-                bytes memory payload = abi.encode(
-                    //uint16(0),
-                    Selector.SET_PROPOSAL_SELECTOR,
+                feesArray.push(crossChainFee);
+
+                bytes memory payload = abi.encodeWithSignature(
+                    "setProposalOnRemote(uint256, uint256, string)",
                     _proposalId,
-                    block.timestamp,
+                    _proposalTimeStart,
                     //proposalData.targets,
                     //proposalData.values,
                     //proposalData.calldatas,
@@ -393,15 +393,13 @@ contract CrossChainDAO is
                 gasService.payNativeGasForContractCall{value: crossChainFee}(
                     address(this), //sender
                     spokeChainNames[i], //destination chain
-                    //address(this).toString(), //destination contract address, would be same address with address(this) since we are using constant address deployer
                     _satelliteAddr.toString(),
                     payload,
-                    msg.sender //refund address //payable(address(this)) //test this later to see the one that is necessary to suit your needs
+                    msg.sender //refund address
                 );
 
                 gateway.callContract(
                     spokeChainNames[i], //destination chain name
-                    //address(this).toString(),
                     _satelliteAddr.toString(), //destination address
                     payload //payload
                 );
@@ -455,5 +453,4 @@ contract CrossChainDAO is
     //function getSpokeVotes(uint256 chainId, uint256 proposalId) public {}
 
     function getAllVotes() public {}
-
 }

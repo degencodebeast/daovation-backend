@@ -27,7 +27,7 @@
   {
     "name": "Avalanche",
     "chainId": 43113,
-    "rpc": "https://endpoints.omniatech.io/v1/avax/fuji/8b3511c041344a21b5e3b64f5e612c87",
+    "rpc": "https://rpc.ankr.com/avalanche_fuji",
     "gateway": "0xC249632c2D40b9001FE907806902f63038B737Ab",
     "constAddressDeployer": "0x98b2920d53612483f91f12ed7754e51b4a77919e",
     "tokenName": "Avax",

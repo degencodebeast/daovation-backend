@@ -19,13 +19,13 @@ let chains = isTestnet ? require("../config/testnet.json") : require("../config/
 
 //let SatelliteAddr = 
 
-const spokeChainNames = ["Avalanche", "Polygon"];
+const spokeChainNames = ["Fantom", "Polygon"];
 const campaignSatellite = require("../artifacts/contracts/CampaignSatellite.sol/CampaignSatellite.json");
 const ExampleProxy = require("../artifacts/contracts/ExampleProxy.sol/ExampleProxy.json");
 
 let chainsInfo: any = [];
 
-let hubChain = "Binance";
+let hubChain = "Aurora";
 
 let governanceTokenAddr = "0xF3701c7dAAa71f3622a47e49Cc0C1Dfae8C6Ce4c";
 let campaignSatelliteAddr = "0x47A62Af19657263E3E0b60312f97F7464F70Ba35";

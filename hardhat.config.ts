@@ -31,7 +31,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
-import "@nomiclabs/hardhat-ethers";
+//import "@nomiclabs/hardhat-ethers";
 
 const config: HardhatUserConfig = {
   // solidity: "0.8.0",
@@ -41,9 +41,8 @@ const config: HardhatUserConfig = {
     settings: {
       evmVersion: process.env.EVM_VERSION || 'london',
       optimizer: {
-        enabled: false,
-        runs: 800,
-       
+        enabled: true,
+        runs: 200,
         details: {
           peephole: true,
           inliner: true,

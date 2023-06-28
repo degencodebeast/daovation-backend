@@ -10,7 +10,6 @@ abstract contract CampaignCountingSimple {
     // The spokechain IDs that the Campaign manager expects to receive data from during the
     // collection phase
     uint32[] public spokeChains;
-
     string[] public spokeChainNames;
 
     constructor(
@@ -35,33 +34,34 @@ abstract contract CampaignCountingSimple {
         string spokeChainName;
     }
 
-    struct SpokeCampaignData {
+    struct SpokeCampaignDonationData {
         //string campaignCID;
-        address campaignOwner;
-        uint256 campaignId;
+        //address campaignOwner;
+        //uint256 campaignId;
         uint256 raisedFunds;
-        bool hasReachedTarget; //This checks whether data was received from the spoke chains or not
-        address[] donators;
+        //bool hasReachedTarget; //This checks whether data was received from the spoke chains or not
+        address[] donors;
         bool initialized;
     }
 
-    struct CampaignData {
+    struct CampaignDonationData {
         //string campaignCID;
-        address campaignOwner;
-        uint256 campaignId;
+        //address campaignOwner;
+        //uint256 campaignId;
         uint256 raisedFunds;
         bool hasReachedTarget;
-        address[] donators;
+        mapping(uint32 => address[]) chainIDToDonors;
+
     }
 
     mapping(string => uint32) public spokeChainNameToSpokeChainId;
 
     // Maps a proposal ID to a map of a chain ID to summarized spoke voting data
-    mapping(uint256 => mapping(uint32 => SpokeCampaignData))
-        public campaignIdToChainIdToSpokeCampaignData;
+    mapping(uint256 => mapping(uint32 => SpokeCampaignDonationData))
+        public campaignIdToChainIdToSpokeDonationData;
     // ...
 
-    mapping(uint256 => CampaignData) private _campaignData;
+    mapping(uint256 => CampaignDonationData) private _campaignDonationData;
 
     function setSpokeChainData(
         uint32[] memory _spokeChains,

@@ -2,6 +2,11 @@
 pragma solidity ^0.8.9;
 
 import "./Campaign.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+//import "@openzeppelin/contracts/utils/Counters.sol";
+
+//import "@openzeppelin/contracts/access/AccessControl.sol";
+
 import {IAxelarGasService} from "@axelar-network/axelar-cgp-solidity/contracts/interfaces/IAxelarGasService.sol";
 import {IAxelarGateway} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
 import {AxelarExecutable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/executable/AxelarExecutable.sol";
@@ -11,23 +16,63 @@ import {StringToBytes32, Bytes32ToString} from "@axelar-network/axelar-gmp-sdk-s
 
 import "./CampaignCountingSimple.sol";
 
-contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
+contract CampaignManager is CampaignCountingSimple, AxelarExecutable, Ownable {
     IAxelarGasService public immutable gasService;
     using StringToAddress for string;
     using AddressToString for address;
+
+    bytes4 immutable SEND_DONATION_DATA_TO_HUB_SELECTOR =
+        bytes4(keccak256("sendDonationDataToHub(uint256)")); //1 - requestCollection
+    bytes4 immutable SET_CAMPAIGN_SELECTOR =
+        bytes4(
+            keccak256(
+                "setCampaignOnRemote(address, uint256, uint256, string, bool, address)"
+            )
+        ); //0 - crossChainPropose
+    bytes4 immutable ON_RECEIVE_DONATION_DATA_SELECTOR =
+        bytes4(
+            keccak256("onReceiveSpokeDonationData(uint256, uint256, address[])")
+        ); // - onReceiveSpokeVotingData
+    bytes4 immutable REMOTE_EXECUTE_WITHDRAWAL_SELECTOR =
+        bytes4(keccak256("executeWithdrawal(uint256)"));
 
     uint256 public campaignIdCounter = 1;
     Campaign[] allCampaigns;
     mapping(address => Campaign[]) public ownerToCampaigns;
     mapping(address => uint256[]) public ownerToCampaignIds;
+    mapping(uint256 => address) public campaignIdToOwner;
     mapping(uint256 => Campaign) public idToCampaigns;
+    mapping(Campaign => uint256) public campaignToIds;
+    mapping(uint256 => Donors[]) public campaignIdToDonors;
+    mapping(Campaign => Donors) public donors;
+    mapping(Campaign => bool) public isCampaign;
 
     uint256[] public allCampaignIds;
 
-    event CampaignCreatedPayload(bytes);
+    //event CampaignCreatedPayload(bytes);
+
+    event CampaignCreated(uint256 campaignId);
+
+    // event campaignRemoved(uint256 campaignId);
 
     mapping(uint256 => bool) public collectionFinished;
     mapping(uint256 => bool) public collectionStarted;
+
+    struct Donors {
+        address donorAddress;
+        uint256 amountDonated;
+    }
+
+    Donors[] public _ALL_DONORS;
+
+    // struct CampaignData {
+    //     uint256 campaignId;
+    //     string campaignCID;
+    //     address campaignOwner;
+    //     uint256 campaignStart;
+    // }
+
+    //CampaignData[] public allCampaignData;
 
     constructor(
         address _gateway,
@@ -44,8 +89,15 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
     function createCampaign(
         string memory _campaignCID,
         uint256 _target,
-        address _campaignSatelliteAddr
+        address _campaignSatelliteAddr,
+        uint256[] memory spokeChainFees
     ) public payable virtual returns (uint256) {
+        uint256 totalFee;
+        for (uint i = 0; i < spokeChainFees.length; i++) {
+            totalFee += spokeChainFees[i];
+        }
+        require(msg.value >= totalFee, "insufficient gas fee for transaction");
+
         uint256 campaignID = campaignIdCounter;
         campaignIdCounter++;
 
@@ -61,25 +113,40 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
         ownerToCampaigns[msg.sender].push(campaign);
         ownerToCampaignIds[msg.sender].push(campaignID);
         idToCampaigns[campaignID] = campaign;
+        campaignToIds[campaign] = campaignID;
+        campaignIdToOwner[campaignID] = msg.sender;
+        isCampaign[campaign] = true;
+        //emit CampaignCreated(campaignID);
 
-        //sends the proposal to all of the other chains
+        //  CampaignData memory _campaignData = CampaignData(
+        //     _campaignID,
+        //     _campaignCID.
+        //     msg.sender,
+        //     _proposalTimeStart
+        // );
+        // allCampaignData.push(_campaignData);
+
+        //sends the campaign to all of the other chains
         if (spokeChains.length > 0) {
-            uint256 crossChainFee = msg.value / spokeChains.length;
-
             //Iterate over every spoke chain
             for (uint16 i = 0; i < spokeChains.length; i++) {
-                // using "0" as the function selector for destination contract
-                bytes memory payload = abi.encode(
-                    0,
-                    abi.encode(campaignID, block.timestamp)
+                uint256 crossChainFee = spokeChainFees[i];
+
+                bytes memory payload = abi.encodeWithSignature(
+                    "setCampaignOnRemote(address, uint256, uint256, string, bool, address)",
+                    address(campaign),
+                    campaignID,
+                    block.timestamp,
+                    _campaignCID,
+                    false,
+                    msg.sender
                 );
 
-                emit CampaignCreatedPayload(payload);
+                emit CampaignCreated(campaignID);
                 // Send a cross-chain message with axelar to the chain in the iterator
                 gasService.payNativeGasForContractCall{value: crossChainFee}(
                     address(this), //sender
                     spokeChainNames[i], //destination chain
-                    //address(this).toString(), //destination contract address, would be same address with address(this) since we are using constant address deployer
                     _campaignSatelliteAddr.toString(),
                     payload,
                     msg.sender //refund address //payable(address(this)) //test this later to see the one that is necessary to suit your needs
@@ -87,7 +154,6 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
 
                 gateway.callContract(
                     spokeChainNames[i],
-                    //address(this).toString(),
                     _campaignSatelliteAddr.toString(),
                     payload
                 );
@@ -115,16 +181,16 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
         _campaign = idToCampaigns[_campaignId];
     }
 
-    function getAllCampaignAddresses()
-        public
-        view
-        returns (address[] memory _campaigns)
-    {
-        _campaigns = new address[](campaignIdCounter);
-        for (uint i = 1; i < campaignIdCounter; i++) {
-            _campaigns[i] = address(allCampaigns[i]);
-        }
-        return _campaigns;
+    function getParticularCampaignId(
+        Campaign campaign
+    ) public view returns (uint256 _campaignId) {
+        _campaignId = campaignToIds[campaign];
+    }
+
+    function getCampaignOwner(
+        uint256 _campaignId
+    ) public view returns (address owner) {
+        owner = campaignIdToOwner[_campaignId];
     }
 
     function getAllCampaigns()
@@ -135,12 +201,73 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
         _allCampaigns = allCampaigns;
     }
 
+    function getAddressBalance(address account) public view returns (uint256) {
+        return account.balance;
+    }
+
     function getAllCampaignIds()
         public
         view
         returns (uint256[] memory _allCampaignIds)
     {
         _allCampaignIds = allCampaignIds;
+    }
+
+    function claim(uint256 _campaignId, uint256 amount) external virtual {
+        address owner = campaignIdToOwner[_campaignId];
+        require(
+            msg.sender == owner,
+            "msg.sender is not the owner of this campaign"
+        );
+
+        Campaign campaign = idToCampaigns[_campaignId];
+        Campaign campaignInstance = Campaign(campaign);
+        campaignInstance.withdraw(amount);
+
+        // (bool success, ) = address(campaign).delegatecall(
+        //     abi.encodeWithSignature("withdraw(uint256)", amount)
+        // );
+        // require(success, "Call failed");
+    }
+
+    function getParticularCampaignDonors(
+        uint256 _campaignId
+    ) public view returns (Donors[] memory _donors) {
+        _donors = campaignIdToDonors[_campaignId];
+    }
+
+    function getAllDonors()
+        public
+        view
+        returns (Donors[] memory _allDonorsData)
+    {
+        _allDonorsData = _ALL_DONORS;
+    }
+
+    //can only be called by DAO, might be expensive for now, could refactor later to
+    //optimize for gas
+    function removeCampaignAddr(Campaign campaign) public onlyOwner {
+        uint index = findCampaignAddrIndex(campaign);
+        require(index < allCampaigns.length, "Element not found");
+
+        // Move the last element to the index being deleted
+        allCampaigns[index] = allCampaigns[allCampaigns.length - 1];
+
+        // Decrease the array length
+        allCampaigns.pop();
+        //uint256 campaignId = getParticularCampaignId(campaign);
+        //emit campaignRemoved(campaignId);
+    }
+
+    function findCampaignAddrIndex(
+        Campaign campaign
+    ) internal view returns (uint) {
+        for (uint i = 0; i < allCampaigns.length; i++) {
+            if (allCampaigns[i] == campaign) {
+                return i;
+            }
+        }
+        return allCampaigns.length; // Element not found, return an invalid index
     }
 
     // function that checks whether or not that each of the spoke chains have sent in donation data before
@@ -165,7 +292,7 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
         for (uint16 i = 0; i < spokeChains.length && phaseFinished; i++) {
             phaseFinished =
                 phaseFinished &&
-                campaignIdToChainIdToSpokeCampaignData[_campaignId][
+                campaignIdToChainIdToSpokeDonationData[_campaignId][
                     spokeChains[i]
                 ].initialized;
         }
@@ -175,25 +302,31 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
 
     function requestCollections(
         uint256 _campaignId,
-        address _satelliteAddr
+        address _satelliteAddr,
+        uint256[] memory spokeChainFees
     ) public payable {
         require(
             !collectionStarted[_campaignId],
             "Collection phase for this proposal has already started"
         );
 
+        uint256 totalFee;
+        for (uint i = 0; i < spokeChainFees.length; i++) {
+            totalFee += spokeChainFees[i];
+        }
+        require(msg.value >= totalFee, "insufficient gas fee for transaction");
+
         collectionStarted[_campaignId] = true;
 
-        //sends an empty message to each of the aggregators. If they receive a
-        // message at all, it is their cue to send data back
-        uint256 crossChainFee = msg.value / spokeChains.length;
         for (uint16 i = 0; i < spokeChains.length; i++) {
-            // using "1" as the function selector
-            bytes memory payload = abi.encode(uint16(1), _campaignId);
+            uint256 crossChainFee = spokeChainFees[i];
+            bytes memory payload = abi.encodeWithSignature(
+                "sendDonationDatatoHub(uint256)",
+                _campaignId
+            );
             gasService.payNativeGasForContractCall{value: crossChainFee}(
                 address(this), //sender
                 spokeChainNames[i], //destination chain
-                //address(this).toString(), //destination contract address, would be same address with address(this) since we are using constant address deployer
                 _satelliteAddr.toString(),
                 payload,
                 msg.sender //refund address //payable(address(this)) //test this later to see the one that is necessary to suit your needs
@@ -201,7 +334,6 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
 
             gateway.callContract(
                 spokeChainNames[i],
-                //address(this).toString(),
                 _satelliteAddr.toString(),
                 payload
             );
@@ -211,49 +343,63 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
     function _execute(
         string calldata sourceChain,
         string calldata /*sourceAddress*/,
-        bytes memory _payload
-    ) internal override /*(AxelarExecutable)*/ {
-        // Gets a function selector option
-
-        //The code below loads a uint16 value from the memory location specified by the
-        // _payload parameter and assigns it to the option variable. The assumption
-        // here is that the _payload parameter points to a location in memory where a uint16
-        // v(alue has been previously encoded.
+        bytes calldata _payload
+    ) internal override {
         uint32 _srcChainId = spokeChainNameToSpokeChainId[sourceChain];
-        uint16 option;
-        assembly {
-            option := mload(add(_payload, 32))
-        }
+
+        bytes calldata payloadNoSig = _payload[4:];
+        bytes4 selector = getSelector(_payload);
 
         // Some options for cross-chain actions are: propose, vote, vote with reason,
         // vote with reason and params, cancel, etc.
-        if (option == 0) {
-            onReceiveSpokeDonationData(_srcChainId, _payload);
-        } else if (option == 1) {
+        if (selector == ON_RECEIVE_DONATION_DATA_SELECTOR) {
+            onReceiveSpokeDonationData(_srcChainId, payloadNoSig);
+        } else if (selector == REMOTE_EXECUTE_WITHDRAWAL_SELECTOR) {
             // TODO: Feel free to put your own cross-chain actions (propose, execute, etc.)
             enableWithdrawal();
         } else {
-            // TODO: You could revert here if you wanted to
+            // You could revert here if you wanted to
+            revert("Invalid payload: no selector match");
         }
-        //string memory message = abi.decode(_payload, (string));
     }
 
-    function enableWithdrawal() public {}
+    function getSelector(
+        bytes memory _data
+    ) internal pure returns (bytes4 sig) {
+        assembly {
+            sig := mload(add(_data, 32))
+        }
+    }
+
+    function enableWithdrawal() public pure returns (string memory message) {
+        message = "You just called the execute withdrawal function from another chain";
+    }
 
     function crossChainDonate(
         uint256 _campaignId,
-        uint256 _amount,
-        address payable _recipient
+        uint256 _amount //address payable _recipient
     ) public payable virtual {
+        Campaign campaign = idToCampaigns[_campaignId];
         require(
-            address(idToCampaigns[_campaignId]) != address(0),
-            "not a valid campaign"
+            address(campaign) != address(0),
+            "campaign cannot be zero address"
+        );
+        require(
+            isCampaign[campaign] == true,
+            "donating to an invalid campaign"
         );
         require(
             msg.value > _amount,
             "sent amount is lower than amount you want to donate"
         );
-        _recipient.transfer(msg.value);
+
+        address campaignAddr = address(campaign);
+        address payable _recipient = payable(campaignAddr);
+        donors[campaign] = Donors(msg.sender, _amount);
+        Donors memory donorsData = donors[campaign];
+        _ALL_DONORS.push(donorsData);
+        campaignIdToDonors[_campaignId].push(donorsData);
+        _recipient.transfer(_amount);
     }
 
     function onReceiveSpokeDonationData(
@@ -261,72 +407,29 @@ contract CampaignManager is CampaignCountingSimple, AxelarExecutable {
         bytes memory payload
     ) internal virtual {
         (
-            ,
-            //uint16 option
             uint256 campaignId,
-            address campaignOwner,
             uint256 raisedFunds,
-            bool hasReachedTarget,
-            address[] memory donators
-        ) = abi.decode(
-                payload,
-                (uint16, uint256, address, uint256, bool, address[])
-            );
+            address[] memory _donors
+        ) = abi.decode(payload, (uint256, uint256, address[]));
 
         //as long as the received data isn't already initialized.._execute
         if (
-            campaignIdToChainIdToSpokeCampaignData[campaignId][_srcChainId]
+            campaignIdToChainIdToSpokeDonationData[campaignId][_srcChainId]
                 .initialized
         ) {
             revert("Already initialized");
         } else {
             //Add it to the map (while setting initialized to true)
-            campaignIdToChainIdToSpokeCampaignData[campaignId][
+            campaignIdToChainIdToSpokeDonationData[campaignId][
                 _srcChainId
-            ] = SpokeCampaignData(
-                campaignOwner,
-                campaignId,
+            ] = SpokeCampaignDonationData(
+                //campaignOwner,
+                //campaignId,
                 raisedFunds,
-                hasReachedTarget,
-                donators,
+                //hasReachedTarget,
+                _donors,
                 true
             );
         }
     }
-
-    // function getCampaignDetails() public view returns(string[] memory)
-    // {}
-
-    // function getCampaignDetails(
-    //     address[] calldata _campaignList
-    // )
-    //     public
-    //     view
-    //     returns (
-    //         string[] memory campaignCID,
-    //         address[] memory owner,
-    //         uint256[] memory id,
-    //         uint256[] memory raisedFunds
-    //     )
-    // {
-    //     owner = new address[](_campaignList.length);
-    //     id = new uint256[](_campaignList.length);
-    //     campaignCID = new string[](_campaignList.length);
-    //     raisedFunds = new uint256[](_campaignList.length);
-
-    //     for (uint256 i = 0; i < _campaignList.length; i++) {
-    //         //uint256 campaignID = allCampaignIds[_campaignList[i]];
-
-    //         owner[i] = allCampaigns[campaignID].owner();
-    //         id[i] = allCampaigns[campaignID].id();
-    //         campaignCID[i] = allCampaigns[campaignID].campaignCID();
-    //         raisedFunds[i] = allCampaigns[campaignID].raisedFunds();
-    //     }
-
-    //     return (campaignCID, owner, id, raisedFunds);
-    // }
-
-    // function getAllDonators() {
-
-    // }
 }

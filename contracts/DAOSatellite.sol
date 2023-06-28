@@ -12,8 +12,8 @@ import "@openzeppelin/contracts/utils/Timers.sol";
 import "@openzeppelin/contracts/utils/Checkpoints.sol";
 import "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {Upgradable} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/upgradable/Upgradable.sol";
-import {Selector} from "./Selector.sol";
 
+//import {Selector} from "./Selector.sol";
 
 contract DAOSatellite is AxelarExecutable, Upgradable {
     // The cross-chain DAO is never deployed on the spoke chains because it wouldn't be efficient to replicate all
@@ -24,7 +24,7 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
 
     using StringToAddress for string;
     using AddressToString for address;
-    using Selector for bytes;
+    //using Selector for bytes;
 
     error AlreadyInitialized();
 
@@ -34,6 +34,20 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
     address public hubChainAddr;
     IVotes public immutable token;
     uint256 public immutable targetSecondsPerBlock;
+
+    bytes4 immutable SEND_RESULTS_TO_HUB_SELECTOR =
+        bytes4(keccak256("sendResultsToHub(uint256)")); //1 - requestCollection
+    bytes4 immutable SET_PROPOSAL_SELECTOR =
+        bytes4(keccak256("setProposalOnRemote(uint256, uint256, string)")); //0 - crossChainPropose
+    bytes4 immutable ON_RECEIVE_VOTING_DATA_SELECTOR =
+        bytes4(
+            keccak256(
+                "onReceiveSpokeVotingData(uint256, uint256, uint256, uint256)"
+            )
+        ); // - onReceiveSpokeVotingData
+
+    bytes4 immutable REMOTE_EXECUTE_PROPOSAL_SELECTOR =
+        bytes4(keccak256("executeProposal(uint256)"));
 
     uint256[] public allProposalIds;
 
@@ -118,21 +132,29 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         string calldata sourceAddress,
         bytes calldata _payload
     ) internal override /*(AxelarExecutable)*/ {
-        // string memory hubAddrString = hubChainAddr.toString();
-        // require(
-        //     keccak256(abi.encodePacked(sourceAddress)) ==
-        //         keccak256(abi.encodePacked(hubAddrString)),
-        //     "Only messages from the hub chain can be received!"
-        // );
+        string memory hubAddrString = hubChainAddr.toString();
+        require(
+            keccak256(abi.encodePacked(sourceAddress)) ==
+                keccak256(abi.encodePacked(hubAddrString)),
+            "Only messages from the hub chain can be received!"
+        );
         bytes calldata payloadNoSig = _payload[4:];
-        bytes4 selector = _payload.getSelector();
+        bytes4 selector = getSelector(_payload);
         // Do 1 of 2 things:
-        if (selector == Selector.SET_PROPOSAL_SELECTOR) {
+        if (selector == SET_PROPOSAL_SELECTOR) {
             setProposalOnRemote(payloadNoSig);
-        } else if (selector == Selector.SEND_RESULTS_SELECTOR) {
+        } else if (selector == SEND_RESULTS_TO_HUB_SELECTOR) {
             sendResultsToHub(sourceAddress, payloadNoSig);
         } else {
             revert("Invalid payload: no selector match");
+        }
+    }
+
+    function getSelector(
+        bytes memory _data
+    ) internal pure returns (bytes4 sig) {
+        assembly {
+            sig := mload(add(_data, 32))
         }
     }
 
@@ -143,7 +165,6 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         //Perform some calculations to generate a cutOffBlockEstimation by subtracting blocks from the current block based on
         //the timestamp and a predetermined seconds-per-block estimate
         // Add a RemoteProposal struct to the proposals map, effectively registering the proposal and its voting-related data on the spoke chain
-
         (
             uint256 proposalId,
             uint256 proposalStart,
@@ -171,9 +192,10 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         uint256 cutOffBlockEstimation = 0;
         if (proposalStart < block.timestamp) {
             uint256 blockAdjustment = (block.timestamp - proposalStart) /
-                targetSecondsPerBlock;
+                targetSecondsPerBlock; //to get how many blocks have passed since the proposal started on the hubchain
             if (blockAdjustment < block.number) {
-                cutOffBlockEstimation = block.number - blockAdjustment;
+                cutOffBlockEstimation = block.number - blockAdjustment; //to get block number of when proposal should
+                // have started on this chain, so block.number - number of blocks that have passed since the proposal started on the hub chain
             } else {
                 cutOffBlockEstimation = block.number;
             }
@@ -186,7 +208,7 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         // ];
 
         proposalIdToProposal[proposalId] = RemoteProposal(
-            cutOffBlockEstimation,
+            cutOffBlockEstimation, //block number at which proposal started on this chain
             false,
             proposalId,
             //targets,
@@ -196,7 +218,7 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
             //proposer
         );
         allProposalIds.push(proposalId);
-        proposalIdToProposal[proposalId] = proposalIdToProposal[proposalId];
+        //proposalIdToProposal[proposalId] = proposalIdToProposal[proposalId];
         //proposerToProposalIds[remoteProposal.proposer].push(proposalId);
         allProposalData.push(proposalIdToProposal[proposalId]);
 
@@ -224,8 +246,8 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         //send vote results back to the hub chain
         uint256 proposalId = abi.decode(_payload, (uint256));
         ProposalVote storage votes = proposalVotes[proposalId];
-        bytes memory votingPayload = abi.encode(
-            Selector.ON_RECEIVE_VOTING_DATA_SELECTOR,
+        bytes memory votingPayload = abi.encodeWithSignature(
+            "onReceiveSpokeVotingData(uint256, uint256, uint256, uint256)",
             proposalId,
             votes.forVotes,
             votes.againstVotes,
@@ -256,7 +278,6 @@ contract DAOSatellite is AxelarExecutable, Upgradable {
         // receive it. There are options that could potentially avert this issue, as explained below, but for simplicity's sake, the satellite contract will have
         //to be sent native currency every once in a while.
     }
-
 
     function getAllProposalIds()
         public

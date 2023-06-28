@@ -21,11 +21,11 @@ const BinanceDAOAddr = "0x558388D8Ebcf227D6cF1C1b8345754259800CA3F"
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
-const spokeChainNames = ["Polygon", "Avalanche"];
+const spokeChainNames = ["Fantom", "Polygon"];
 const spokeChainIds: any = [];
 
 
-const HubChain = "Binance";
+const HubChain = "Aurora";
 const campaignManagerAddr: any = "0xb4439634ad988555F2a5EB3810ae589A353A2B77";
 
 let encodedSpokeChainIds: any;

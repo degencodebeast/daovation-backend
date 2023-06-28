@@ -14,7 +14,7 @@ let chains = isTestnet ? require("../config/testnet.json") : require("../config/
 
 let hubChain = "Polygon";
 
-const simpleIncrementerAddress = "0x4796e4dd4dEaE309D6bA19c6b42c5a7cc77d2537";
+const simpleIncrementerAddress = "0xd0D03f1856aBD603510C6D3334B66B878E5a8f07";
 
 export async function main() {
    await deployIncrementer(hubChain, wallet);

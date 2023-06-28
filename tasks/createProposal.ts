@@ -18,12 +18,12 @@ const { defaultAbiCoder } = utils;
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
+let governanceTokenAddr = "0x1e544Cdb9754eb341c6368FD8c2CE0Cfbd9157d1";
+let DAOAddress = "0xf49e05781f66ECE655AC19b3044B496D56Bb9073";
+let satelliteAddr = "0x9d73A927528c76a9be12Da79E035A33368C4c38f";
 
-let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
-let DAOAddress = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
-let satelliteAddr = "0xD69E106223f50C6FCDD5B74Ba8c1bD0929cDf4fd";
 
-const daoInteractAddress = "0x4796e4dd4dEaE309D6bA19c6b42c5a7cc77d2537";
+const daoInteractAddress = "0xd0D03f1856aBD603510C6D3334B66B878E5a8f07";
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
@@ -36,7 +36,6 @@ const chain = chains.find((chain: any) => chain.name === hubChain);
 const provider = getDefaultProvider(chain.rpc);
 const connectedWallet = wallet.connect(provider);
 
-let troll: any = [];
 export async function main() {
 
   const receiverChains = [EvmChain.FANTOM, EvmChain.AVALANCHE];
@@ -55,7 +54,7 @@ export async function main() {
         receiverChains[i],
         gasToken,
         700000,
-        1.7
+        1.3
       );
       //let result = getGasFee(sender, receiverChains[i], gasToken);
       feesArr.push(result);
@@ -65,15 +64,17 @@ export async function main() {
     console.log(fees);
     //await createProposal('Proposal for me to be given 1000 BNB!', fees);
 
-    let totalFees: BigNumber  = ethers.BigNumber.from(0);
+    let totalFees: BigNumber = ethers.BigNumber.from(0);
     for (let i = 0; i < fees.length; i++) {
       let number: BigNumber = ethers.BigNumber.from(fees[i])
       totalFees = totalFees.add(number);
     }
 
-    console.log(totalFees.toString())
+    console.log(`totalFees = ${totalFees.toString()}`)
+    const multipliedValue = totalFees.mul(11).div(10)
+    console.log(`total fees * 1.1 = ${multipliedValue.toString()}`)
 
-    const totalFeesInWei = ethers.utils.parseEther(totalFees.toString());
+    //const totalFeesInWei = ethers.utils.parseEther(totalFees.toString());
 
     //const bufferFees = totalFees * 1.3;
 
@@ -92,10 +93,12 @@ export async function main() {
 
     console.log('creatingProposal...')
 
-    let description = 'Proposal for me to be given 100000 BNB!'
+    let description = 'Proposal for me to be given 1000000 BNB!'
 
     //const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, feesArray, { value: "10000000000000000000" })
-    const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, fees, { value: totalFees })
+
+    //later check whether if you use totalFees, whether it will still go
+    const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, fees, { gasLimit: 6000000, value: totalFees })
     const result = await tx.wait();
     console.log(`Proposal created at this transaction hash: ${result.transactionHash}`);
   })();

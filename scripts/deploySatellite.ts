@@ -30,17 +30,17 @@ let targetSecondsPerBlockObj = require("../config/targetSecondsPerBlock.json");
 
 //let moonBeamSatelliteAddr 
 
-const spokeChainNames = ["Fantom", "Avalanche"];
+const spokeChainNames = ["Fantom", "Polygon"];
 const daoSatellite = require("../artifacts/contracts/DAOSatellite.sol/DAOSatellite.json");
 const ExampleProxy = require("../artifacts/contracts/ExampleProxy.sol/ExampleProxy.json");
 
 let chainsInfo: any = [];
 
-let hubChain = "Polygon";
+let hubChain = "Aurora";
 
-let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
-let DAOAddress = "0x5d58EaF49B52A8Bf4C07B7D3517aB7BC04844D5e";
-let satelliteAddr = "0xD69E106223f50C6FCDD5B74Ba8c1bD0929cDf4fd";
+let governanceTokenAddr = "0x1e544Cdb9754eb341c6368FD8c2CE0Cfbd9157d1";
+let DAOAddress = "0xf49e05781f66ECE655AC19b3044B496D56Bb9073";
+let satelliteAddr = "0x9d73A927528c76a9be12Da79E035A33368C4c38f";
 
 
 // removed rpc for avax
@@ -71,7 +71,7 @@ async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wall
         [],
         //defaultAbiCoder.encode(['string'], [chain.name]),
         defaultAbiCoder.encode(['string'], [chain.name]),
-        'SaltAgainBroBroBro',
+        '123blesso90olokaeeuid',
         myGasLimit2
     );
     // chain.contract = contract;
@@ -102,7 +102,6 @@ async function deployConstant(_hubChain: string, _hubChainAddr: string, chain: a
     // chain.contract = contract;
     // console.log(`Deployed Satellite for ${chain.name} at ${chain.contract.address}`);
     //chain.contract = contract;
-    console.log(`The contract address deployer for  ${chain.name} is ${chain.constAddressDeployer}`)
     console.log(`Deployed Satellite for ${chain.name} at ${contract.address}`);
 }
 
@@ -158,7 +157,7 @@ async function main() {
         //const estimatedGas: any = await estimateGas(daoSatellite, hubChain, DAOAddress, chainInfo, wallet, governanceTokenAddr, targetSecond);
 
         const estimatedGas: any = await estimateGas(daoSatellite, hubChain, DAOAddress, chainInfo, wallet, governanceTokenAddr, targetSecond);
-        const bufferGas: any = BigInt(Math.floor(estimatedGas * 1.6))
+        const bufferGas: any = BigInt(Math.floor(estimatedGas * 1.7))
 
         // //const bufferGas = Math.ceil(estimatedGas.toNumber() * (bufferPercentage / 100));
         // const bufferGas: any = BigInt(Math.floor(estimatedGas * 1.3))
@@ -169,7 +168,7 @@ async function main() {
         const jsGasLimit = bigNumber.toNumber();
         console.log(jsGasLimit)
 
-        await deploy(hubChain, DAOAddress, chainInfo, wallet, governanceTokenAddr, targetSecond, jsGasLimit);
+       await deploy(hubChain, DAOAddress, chainInfo, wallet, governanceTokenAddr, targetSecond, jsGasLimit);
         //await deployConstant(hubChain, DAOAddress, chainInfo, wallet, governanceTokenAddr, targetSecond, jsGasLimit)
         //await deployAndInitConstant(hubChain, DAOAddress, chainInfo, wallet, governanceTokenAddr, targetSecond, bufferGas)
     }
@@ -198,15 +197,15 @@ async function estimateGas(contractJson: any, _hubChain: string, _hubChainAddr: 
     const provider = getDefaultProvider(chain.rpc);
     //const connectedWallet = wallet.connect(provider);
 
-    const gas = await estimateGasForDeploy(contractJson, [hubChain, DAOAddress,
-        chain.gateway, chain.gasReceiver, governanceToken, targetSecondsPerBlock]);
-    console.log(`Gas for this contract deploy for ${chain.name} is ${gas}`);
-    return gas;
-
-    // const gas = await estimateGasTestnet(contractJson, chain, wallet, [hubChain, DAOAddress,
-    // chain.gateway, chain.gasReceiver, governanceToken, targetSecondsPerBlock]);
+    // const gas = await estimateGasForDeploy(contractJson, [hubChain, DAOAddress,
+    //     chain.gateway, chain.gasReceiver, governanceToken, targetSecondsPerBlock]);
     // console.log(`Gas for this contract deploy for ${chain.name} is ${gas}`);
     // return gas;
+
+    const gas = await estimateGasTestnet(contractJson, chain, wallet, [hubChain, DAOAddress,
+    chain.gateway, chain.gasReceiver, governanceToken, targetSecondsPerBlock]);
+    console.log(`Gas for this contract deploy for ${chain.name} is ${gas}`);
+    return gas;
 
 }
 
@@ -226,7 +225,7 @@ const estimateGasTestnet = async (contractJson: any, chain: any, _wallet: any, a
         connectedWallet,
     );
 
-    const deployer = await deployerFactory.deploy();
+    const deployer = await deployerFactory.deploy({gasLimit: 5000000});
     await deployer.deployed();
 
     const salt = getSaltFromKey('');

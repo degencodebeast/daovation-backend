@@ -8,15 +8,11 @@ import { isTestnet, wallet } from "../config/constants";
 
 const { defaultAbiCoder } = utils;
 
-
-
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let governanceTokenAddr = "0x22eA0B5104cfa244960cF1957E60Adc2B3aC9047";
-let DAOAddress = "0xaa5E388750c464a7f231f28Fff0a0607203C7c26";
-let satelliteAddr = "0xD69E106223f50C6FCDD5B74Ba8c1bD0929cDf4fd";
-
-
+let governanceTokenAddr = "0x1e544Cdb9754eb341c6368FD8c2CE0Cfbd9157d1";
+let DAOAddress = "0xf49e05781f66ECE655AC19b3044B496D56Bb9073";
+let satelliteAddr = "0x9d73A927528c76a9be12Da79E035A33368C4c38f";
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
@@ -38,12 +34,10 @@ function convertToUnits(_tx: any) {
     return arr;
 }
 
-
 export async function main() {
-    await readSatelliteData(spokeChainNames[1], wallet);
+    await readSatelliteData(spokeChainNames[0], wallet);
 
 }
-
 
 async function readSatelliteData(chainName: string, wallet: any) {
     const chain = chains.find((chain: any) => chain.name === chainName);
