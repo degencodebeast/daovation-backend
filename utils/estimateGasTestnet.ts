@@ -7,6 +7,8 @@ import { isTestnet, wallet } from "../config/constants";
 
 const { keccak256, defaultAbiCoder } = utils;
 
+const { deployUpgradable, deployContractConstant, deployAndInitContractConstant } = require("@axelar-network/axelar-gmp-sdk-solidity");
+
 const ConstAddressDeployer = require("@axelar-network/axelar-gmp-sdk-solidity/dist/ConstAddressDeployer.json");
 
 const getSaltFromKey = (key: any) => {
@@ -18,7 +20,7 @@ let chains = isTestnet ? require("../config/testnet.json") : require("../config/
 export const estimateGasTestnet = async (contractJson: any, _chain: any, args: any[] = []) => {
     const chain = chains.find((chain: any) => chain.name === _chain);
     const key: any = process.env.NEXT_PUBLIC_EVM_PRIVATE_KEY
-    const chainProvider: any = getDefaultProvider(chain.rpc);
+    const chainProvider: any = getDefaultProvider(chain?.rpc);
 
     const connectedWallet = new Wallet(key, chainProvider)
 

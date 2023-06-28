@@ -30,8 +30,8 @@ const getSaltFromKey = (key: any) => {
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let GovernanceTokenAddr = "0x1e544Cdb9754eb341c6368FD8c2CE0Cfbd9157d1";
-const PolygonDAOAddr = "0xf49e05781f66ECE655AC19b3044B496D56Bb9073"
+let GovernanceTokenAddr = "0xD7F2bbC67cBC880F8f7C99d9F24dE7bBe3243C4C";
+const AuroraDAOAddr = "0xeE72F500671d7F8439c0b3B3c6a472CdA4BCb560"
 
 
 
@@ -136,7 +136,7 @@ async function crossChainDAODeploy(hubChain: any, wallet: any, governanceToken: 
         chain.gasReceiver,
         encodedSpokeChainIds,
         encodedSpokeChainNames,
-        {gasLimit: 9000000}
+        {gasLimit: 7000000}
     //    {gasLimit: _gasLimit}
     );
 

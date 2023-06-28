@@ -26,7 +26,7 @@ const spokeChainIds: any = [];
 
 
 const HubChain = "Aurora";
-const campaignManagerAddr: any = "0xb4439634ad988555F2a5EB3810ae589A353A2B77";
+const campaignManagerAddr: any = "0xfaEAc401400A66262CBBe90A37eDAB8CE48B3Ab4";
 
 let encodedSpokeChainIds: any;
 let encodedSpokeChainNames: any;

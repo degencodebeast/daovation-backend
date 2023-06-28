@@ -38,9 +38,11 @@ let chainsInfo: any = [];
 
 let hubChain = "Aurora";
 
-let governanceTokenAddr = "0x1e544Cdb9754eb341c6368FD8c2CE0Cfbd9157d1";
-let DAOAddress = "0xf49e05781f66ECE655AC19b3044B496D56Bb9073";
-let satelliteAddr = "0x9d73A927528c76a9be12Da79E035A33368C4c38f";
+let governanceTokenAddr = "0xD7F2bbC67cBC880F8f7C99d9F24dE7bBe3243C4C";
+let DAOAddress = "0xeE72F500671d7F8439c0b3B3c6a472CdA4BCb560";
+let satelliteAddr = "0xc7FFF6CcC69249E89f3aeE092B1713ED2c65dE08";
+
+
 
 
 // removed rpc for avax
@@ -71,7 +73,7 @@ async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wall
         [],
         //defaultAbiCoder.encode(['string'], [chain.name]),
         defaultAbiCoder.encode(['string'], [chain.name]),
-        '123blesso90olokaeeuid',
+        '123blesssquidroughid',
         myGasLimit2
     );
     // chain.contract = contract;
@@ -225,7 +227,7 @@ const estimateGasTestnet = async (contractJson: any, chain: any, _wallet: any, a
         connectedWallet,
     );
 
-    const deployer = await deployerFactory.deploy({gasLimit: 5000000});
+    const deployer = await deployerFactory.deploy({gasLimit: 7000000});
     await deployer.deployed();
 
     const salt = getSaltFromKey('');

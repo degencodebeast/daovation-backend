@@ -22,18 +22,23 @@ let chains = isTestnet ? require("../config/testnet.json") : require("../config/
 const spokeChainNames = ["Fantom", "Polygon"];
 const campaignSatellite = require("../artifacts/contracts/CampaignSatellite.sol/CampaignSatellite.json");
 const ExampleProxy = require("../artifacts/contracts/ExampleProxy.sol/ExampleProxy.json");
+let targetSecondsPerBlockObj = require("../config/targetSecondsPerBlock.json");
+
 
 let chainsInfo: any = [];
 
 let hubChain = "Aurora";
 
-let governanceTokenAddr = "0xF3701c7dAAa71f3622a47e49Cc0C1Dfae8C6Ce4c";
-let campaignSatelliteAddr = "0x47A62Af19657263E3E0b60312f97F7464F70Ba35";
+
+let campaignManagerAddr = "0xfaEAc401400A66262CBBe90A37eDAB8CE48B3Ab4"
+let campaignSatelliteAddr = "0xc514d8Fd3052E3D2aE793c1e95d4EFdA8Bb05d83"
+
+
 
 //let spokeChain = "Moonbeam";
 
 
-async function deploy(_hubChain: string, chain: any, wallet: any) {
+async function deploy(_hubChain: string, _hubChainAddr: string, chain: any, wallet: any,  targetSecondsPerBlock: number) {
     console.log(`Deploying Campaign Satellite for ${chain.name}.`);
     const provider = getDefaultProvider(chain.rpc);
     const connectedWallet = wallet.connect(provider);
@@ -42,15 +47,17 @@ async function deploy(_hubChain: string, chain: any, wallet: any) {
         connectedWallet,
         campaignSatellite,
         ExampleProxy,
-        [_hubChain, chain.gateway, chain.gasReceiver],
+        [_hubChain, _hubChainAddr, chain.gateway, chain.gasReceiver, targetSecondsPerBlock],
         [],
         //defaultAbiCoder.encode(['string'], [chain.name]),
         defaultAbiCoder.encode(['string'], [chain.name]),
-        'campaignSatellite'
+        'campaignSatellitessss'
     );
     chain.contract = contract;
     console.log(`Deployed Campaign Satellite for ${chain.name} at ${chain.contract.address}.`);
 }
+
+let targetSecond: any;
 
 async function main() {
     const promises = [];
@@ -66,9 +73,15 @@ async function main() {
             }
         });
 
+        for (const property in targetSecondsPerBlockObj) {
+            if (chainName === property) {
+                targetSecond = targetSecondsPerBlockObj[property]
+            }
+        }
+
         console.log(`Deploying [${chainName}]`);
 
-        await deploy(hubChain, chainInfo, wallet);
+        await deploy(hubChain, campaignManagerAddr, chainInfo, wallet, targetSecond);
 
     }
 
