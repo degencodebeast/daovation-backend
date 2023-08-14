@@ -12,9 +12,9 @@ const { utils: {
 
 let chains = isTestnet ? require("../config/testnet.json") : require("../config/local.json");
 
-let hubChain = "Polygon";
+let hubChain = "Aurora";
 
-const simpleIncrementerAddress = "0xd0D03f1856aBD603510C6D3334B66B878E5a8f07";
+const simpleIncrementerAddress = "0x7dA8F2F7EF7760E086c2b862cdDeBEFa8d969aa2";
 
 export async function main() {
    await deployIncrementer(hubChain, wallet);

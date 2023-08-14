@@ -23,14 +23,14 @@ let DAOAddress = "0xf49e05781f66ECE655AC19b3044B496D56Bb9073";
 let satelliteAddr = "0x9d73A927528c76a9be12Da79E035A33368C4c38f";
 
 
-const daoInteractAddress = "0xd0D03f1856aBD603510C6D3334B66B878E5a8f07";
+const daoInteractAddress = "0x7dA8F2F7EF7760E086c2b862cdDeBEFa8d969aa2";
 
 //const spokeChainNames = ["Moonbeam", "Avalanche", "Ethereum", "Fantom", "Polygon"];
 
-const spokeChainNames = ["Fantom", "Avalanche"];
+const spokeChainNames = ["Fantom", "Polygon"];
 const spokeChainIds: any = [];
 
-let hubChain = 'Polygon';
+let hubChain = 'Aurora';
 
 const chain = chains.find((chain: any) => chain.name === hubChain);
 const provider = getDefaultProvider(chain.rpc);
@@ -54,7 +54,7 @@ export async function main() {
         receiverChains[i],
         gasToken,
         700000,
-        1.3
+        1.7
       );
       //let result = getGasFee(sender, receiverChains[i], gasToken);
       feesArr.push(result);
@@ -91,14 +91,17 @@ export async function main() {
     const values = [0];
     const callDatas = [incrementData];
 
-    console.log('creatingProposal...')
-
     let description = 'Proposal for me to be given 1000000 BNB!'
 
     //const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, feesArray, { value: "10000000000000000000" })
+    
+    // const gasEstimate = await crossChainDAOInstance.estimateGas.crossChainPropose(targets, values, callDatas, description, satelliteAddr, fees,{gasLimit: 14000000, value: multipliedValue });
+    // console.log('Gas estimate:', gasEstimate.toString());
+
+    console.log('creatingProposal...') 
 
     //later check whether if you use totalFees, whether it will still go
-    const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, fees, { gasLimit: 6000000, value: totalFees })
+    const tx = await crossChainDAOInstance.crossChainPropose(targets, values, callDatas, description, satelliteAddr, fees, {gasLimit: 6300000, value: multipliedValue })
     const result = await tx.wait();
     console.log(`Proposal created at this transaction hash: ${result.transactionHash}`);
   })();
